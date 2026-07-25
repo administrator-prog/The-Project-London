@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Archivo:wght@500&family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@500&family=Inter:wght@300;400&display=swap"
       rel="stylesheet"
     />
 
@@ -87,15 +87,16 @@
       }
 
       /* — Under construction — */
-      /* Same face as the supporting line below it — sentence case, unbold,
-         separated from it by size and colour rather than weight. */
+      /* Same tracked Archivo caps as the password label, so the two moments
+         on this page speak in one voice. */
       .headline {
         margin: 3.25rem 0 0;
-        font-family: Inter, system-ui, sans-serif;
-        font-weight: 400;
-        font-size: clamp(1.375rem, 5vw, 1.75rem);
-        line-height: 1.3;
-        letter-spacing: -0.005em;
+        font-family: Archivo, system-ui, sans-serif;
+        text-transform: uppercase;
+        font-weight: 500;
+        font-size: clamp(0.8125rem, 2.6vw, 0.9375rem);
+        line-height: 1.5;
+        letter-spacing: 0.18em;
       }
       /* Slow light sweep across the words, like a shopfront being polished. */
       .headline span {
@@ -221,8 +222,12 @@
       }
       .thanks {
         margin: 2.75rem 0 0;
-        font-family: 'Instrument Serif', Georgia, serif;
-        font-size: 1.375rem;
+        font-family: Archivo, system-ui, sans-serif;
+        text-transform: uppercase;
+        font-weight: 500;
+        font-size: 0.75rem;
+        line-height: 1.6;
+        letter-spacing: 0.18em;
         color: var(--ink);
         animation: rise 0.7s var(--ease) both;
       }
