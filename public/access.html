@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Archivo:wght@500&family=Inter:wght@300;400&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@500&family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400&display=swap"
       rel="stylesheet"
     />
 
@@ -24,6 +24,8 @@
         --ink: #0a0a0a;
         --bone: #f6f4ef;
         --ash: #9a958c;
+        --fog: #6d6a63;
+        --line: rgba(10, 10, 10, 0.14);
         --ease: cubic-bezier(0.16, 1, 0.3, 1);
       }
       * {
@@ -33,41 +35,270 @@
         margin: 0;
         min-height: 100svh;
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: 1.5rem;
+        padding: 3rem 1.5rem 5rem;
         background: var(--bone);
         color: var(--ink);
         font-family: Inter, system-ui, sans-serif;
         font-weight: 300;
         -webkit-font-smoothing: antialiased;
       }
+
+      /* The browser default is a blue ring, which fights the palette. */
+      :focus-visible {
+        outline: 1px solid var(--ink);
+        outline-offset: 3px;
+      }
+
       .panel {
         width: 100%;
-        max-width: 28rem;
+        max-width: 30rem;
         text-align: center;
-        animation: rise 0.8s var(--ease) both;
+      }
+
+      /* — Rise-in, staggered down the page — */
+      .rise {
+        animation: rise 0.9s var(--ease) both;
+      }
+      .rise:nth-child(1) {
+        animation-delay: 0.05s;
+      }
+      .rise:nth-child(2) {
+        animation-delay: 0.15s;
+      }
+      .rise:nth-child(3) {
+        animation-delay: 0.25s;
+      }
+      .rise:nth-child(4) {
+        animation-delay: 0.35s;
       }
       @keyframes rise {
         from {
           opacity: 0;
-          transform: translateY(12px);
+          transform: translateY(14px);
         }
       }
+
       .logo {
-        height: 3rem;
+        height: 3.25rem;
         width: auto;
       }
+
+      /* — Under construction — */
+      .headline {
+        margin: 3.5rem 0 0;
+        font-family: 'Instrument Serif', Georgia, serif;
+        font-weight: 400;
+        font-size: clamp(2.25rem, 9vw, 3.5rem);
+        line-height: 1.05;
+        letter-spacing: -0.01em;
+      }
+      .headline em {
+        font-style: italic;
+      }
+      /* Slow light sweep across the words, like a shopfront being polished. */
+      .headline span {
+        background-image: linear-gradient(
+          100deg,
+          var(--ink) 0%,
+          var(--ink) 38%,
+          var(--ash) 50%,
+          var(--ink) 62%,
+          var(--ink) 100%
+        );
+        background-size: 300% 100%;
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        animation: sweep 7s ease-in-out infinite;
+      }
+      @keyframes sweep {
+        0%,
+        100% {
+          background-position: 130% 0;
+        }
+        50% {
+          background-position: -30% 0;
+        }
+      }
+
+      /* Thin rule with a travelling segment — progress, without a percentage. */
+      .rule {
+        position: relative;
+        width: 4.5rem;
+        height: 1px;
+        margin: 2rem auto 0;
+        background: var(--line);
+        overflow: hidden;
+      }
+      .rule::after {
+        content: '';
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 40%;
+        background: var(--ink);
+        animation: travel 2.8s var(--ease) infinite;
+      }
+      @keyframes travel {
+        0% {
+          transform: translateX(-100%);
+        }
+        100% {
+          transform: translateX(250%);
+        }
+      }
+
+      .intro {
+        margin: 2rem 0 0;
+        font-size: 0.9375rem;
+        line-height: 1.7;
+        color: var(--fog);
+      }
+
+      /* — Signup — */
+      form.signup {
+        margin-top: 2.75rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.625rem;
+      }
+      .signup input {
+        height: 3.25rem;
+        padding: 0 1rem;
+        border: 1px solid var(--line);
+        background: transparent;
+        font: inherit;
+        font-size: 0.9375rem;
+        color: var(--ink);
+        text-align: center;
+        transition:
+          border-color 0.4s var(--ease),
+          background-color 0.4s var(--ease);
+      }
+      .signup input::placeholder {
+        color: var(--ash);
+      }
+      .signup input:hover:not(:disabled) {
+        border-color: rgba(10, 10, 10, 0.28);
+      }
+      .signup input:focus {
+        outline: none;
+        border-color: var(--ink);
+      }
+      .signup button {
+        height: 3.25rem;
+        margin-top: 0.375rem;
+        border: 1px solid var(--ink);
+        background: var(--ink);
+        color: var(--bone);
+        font-family: Archivo, system-ui, sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        font-size: 0.6875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition:
+          letter-spacing 0.5s var(--ease),
+          opacity 0.3s var(--ease);
+      }
+      .signup button:hover:not(:disabled) {
+        letter-spacing: 0.22em;
+      }
+      .signup button:disabled,
+      .signup input:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+
+      .message {
+        min-height: 1.25rem;
+        margin: 1.25rem 0 0;
+        font-size: 0.8125rem;
+        line-height: 1.5;
+        color: var(--fog);
+      }
+      .thanks {
+        margin: 2.75rem 0 0;
+        font-family: 'Instrument Serif', Georgia, serif;
+        font-size: 1.375rem;
+        color: var(--ink);
+        animation: rise 0.7s var(--ease) both;
+      }
+
+      /* — Tucked-away password entry — */
+      .lock {
+        position: fixed;
+        right: 1.5rem;
+        bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.75rem;
+        height: 2.75rem;
+        padding: 0;
+        border: 1px solid var(--line);
+        border-radius: 50%;
+        background: transparent;
+        color: var(--ash);
+        cursor: pointer;
+        transition:
+          color 0.4s var(--ease),
+          border-color 0.4s var(--ease),
+          background-color 0.4s var(--ease);
+        animation: rise 0.9s var(--ease) 0.6s both;
+      }
+      .lock:hover,
+      .lock:focus-visible {
+        color: var(--bone);
+        border-color: var(--ink);
+        background: var(--ink);
+        outline: none;
+      }
+
+      dialog {
+        width: min(24rem, calc(100vw - 3rem));
+        padding: 2.75rem 2rem 2rem;
+        border: 0;
+        background: var(--bone);
+        color: var(--ink);
+        box-shadow: 0 24px 60px rgba(10, 10, 10, 0.16);
+        animation: rise 0.45s var(--ease) both;
+      }
+      dialog::backdrop {
+        background: rgba(10, 10, 10, 0.45);
+        backdrop-filter: blur(3px);
+      }
+      .dialog-close {
+        position: absolute;
+        top: 0.625rem;
+        right: 0.625rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.25rem;
+        height: 2.25rem;
+        border: 0;
+        background: transparent;
+        color: var(--ash);
+        cursor: pointer;
+        transition: color 0.3s var(--ease);
+      }
+      .dialog-close:hover {
+        color: var(--ink);
+      }
       .label {
-        margin: 2.5rem 0 0;
+        margin: 0;
         font-family: Archivo, system-ui, sans-serif;
         text-transform: uppercase;
         letter-spacing: 0.18em;
         font-size: 0.6875rem;
         font-weight: 500;
         color: var(--ash);
+        text-align: center;
       }
-      form {
+      form.gate {
         position: relative;
         display: flex;
         align-items: center;
@@ -75,12 +306,12 @@
         border-bottom: 1px solid rgba(10, 10, 10, 0.3);
         transition: border-color 0.4s var(--ease);
       }
-      form:focus-within {
+      form.gate:focus-within {
         border-bottom-color: var(--ink);
       }
-      input {
+      form.gate input {
         width: 100%;
-        height: 3.5rem;
+        height: 3.25rem;
         padding-right: 3rem;
         border: 0;
         background: transparent;
@@ -89,16 +320,13 @@
         font-size: 1rem;
         color: var(--ink);
       }
-      input::placeholder {
-        color: var(--ash);
-      }
-      input:focus {
+      form.gate input:focus {
         outline: none;
       }
-      input:disabled {
+      form.gate input:disabled {
         opacity: 0.5;
       }
-      button {
+      form.gate button {
         position: absolute;
         right: 0;
         display: flex;
@@ -112,77 +340,31 @@
         cursor: pointer;
         transition: transform 0.5s var(--ease);
       }
-      button:hover:not(:disabled) {
+      form.gate button:hover:not(:disabled) {
         transform: translateX(4px);
       }
-      button:disabled {
+      form.gate button:disabled {
         opacity: 0.4;
         cursor: default;
       }
-      .message {
-        min-height: 1rem;
-        margin: 1.25rem 0 0;
-        font-size: 0.75rem;
-        color: var(--ink);
+      dialog .message {
+        text-align: center;
       }
 
-      /* — Interest list — */
-      .signup {
-        margin-top: 4rem;
-        padding-top: 2.5rem;
-        border-top: 1px solid rgba(10, 10, 10, 0.12);
-      }
-      .signup p.intro {
-        margin: 0.75rem 0 0;
-        font-size: 0.875rem;
-        line-height: 1.6;
-        color: #6d6a63;
-      }
-      .fields {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-        margin-top: 1.75rem;
-      }
-      .fields input {
-        height: 3rem;
-        padding: 0 0.75rem;
-        border: 1px solid rgba(10, 10, 10, 0.2);
-        background: transparent;
-        font-size: 0.9375rem;
-        text-align: center;
-        transition: border-color 0.4s var(--ease);
-      }
-      .fields input:focus {
-        border-color: var(--ink);
-      }
-      .signup button {
-        position: static;
-        width: 100%;
-        height: 3rem;
-        margin-top: 0.75rem;
-        border: 1px solid var(--ink);
-        background: var(--ink);
-        color: var(--bone);
-        font-family: Archivo, system-ui, sans-serif;
-        text-transform: uppercase;
-        letter-spacing: 0.16em;
-        font-size: 0.6875rem;
-        font-weight: 500;
-        transition:
-          letter-spacing 0.5s var(--ease),
-          opacity 0.3s var(--ease);
-      }
-      .signup button:hover:not(:disabled) {
-        transform: none;
-        letter-spacing: 0.2em;
-      }
       @media (prefers-reduced-motion: reduce) {
         *,
         *::before,
         *::after {
           animation-duration: 0.001ms !important;
+          animation-iteration-count: 1 !important;
           transition-duration: 0.001ms !important;
+        }
+        /* The sweep animates the text fill; frozen mid-gradient it can render
+           pale, so opt back into a flat colour. */
+        .headline span {
+          background: none;
+          -webkit-text-fill-color: var(--ink);
+          color: var(--ink);
         }
       }
     </style>
@@ -190,14 +372,67 @@
   <body>
     <main class="panel">
       <img
-        class="logo"
+        class="logo rise"
         src="https://cdn.estateonline.ai/The%20Project%20London/BLACK%20FONT%20(1).png"
         alt="The Project London"
       />
 
-      <p class="label">By invitation</p>
+      <div class="rise">
+        <h1 class="headline"><span>Under <em>construction</em></span></h1>
+        <div class="rule" aria-hidden="true"></div>
+      </div>
 
-      <form id="gate">
+      <div class="rise">
+        <p class="intro">
+          Something considered is on its way. Leave your details for release
+          dates and first access.
+        </p>
+      </div>
+
+      <div class="rise">
+        <form class="signup" id="signup">
+          <input
+            id="name"
+            type="text"
+            name="name"
+            placeholder="Full name"
+            aria-label="Full name"
+            autocomplete="name"
+            required
+          />
+          <input
+            id="email"
+            type="email"
+            name="email"
+            placeholder="Email address"
+            aria-label="Email address"
+            autocomplete="email"
+            required
+          />
+          <button type="submit">Notify me</button>
+        </form>
+
+        <p class="message" id="signup-message" role="status"></p>
+      </div>
+    </main>
+
+    <button class="lock" id="lock" type="button" aria-label="Enter with password">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="4" y="10.5" width="16" height="11" rx="1.5" />
+        <path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" stroke-linecap="round" />
+      </svg>
+    </button>
+
+    <dialog id="gate-dialog" aria-labelledby="gate-label">
+      <button class="dialog-close" id="gate-close" type="button" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M6 6l12 12M18 6L6 18" stroke-linecap="round" />
+        </svg>
+      </button>
+
+      <p class="label" id="gate-label">Enter the site</p>
+
+      <form class="gate" id="gate">
         <input
           id="password"
           type="password"
@@ -206,7 +441,6 @@
           aria-label="Password"
           autocomplete="current-password"
           required
-          autofocus
         />
         <button type="submit" aria-label="Enter">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -215,88 +449,10 @@
         </button>
       </form>
 
-      <p class="message" id="message" role="alert"></p>
-
-      <section class="signup">
-        <p class="label">Register interest</p>
-        <p class="intro">No password? Leave your details for release dates and first access.</p>
-
-        <form id="signup">
-          <div class="fields">
-            <input
-              id="name"
-              type="text"
-              name="name"
-              placeholder="Full name"
-              aria-label="Full name"
-              autocomplete="name"
-              required
-            />
-            <input
-              id="email"
-              type="email"
-              name="email"
-              placeholder="Email address"
-              aria-label="Email address"
-              autocomplete="email"
-              required
-            />
-          </div>
-          <button type="submit">Notify me</button>
-        </form>
-
-        <p class="message" id="signup-message" role="status"></p>
-      </section>
-    </main>
+      <p class="message" id="gate-message" role="alert"></p>
+    </dialog>
 
     <script>
-      const form = document.getElementById('gate')
-      const input = document.getElementById('password')
-      const button = form.querySelector('button')
-      const message = document.getElementById('message')
-
-      /** Only same-site relative paths, so ?next= can't bounce people off-site. */
-      function safeNext() {
-        const value = new URLSearchParams(location.search).get('next')
-        return value && /^\/(?!\/)/.test(value) ? value : '/'
-      }
-
-      form.addEventListener('submit', async (event) => {
-        event.preventDefault()
-        if (!input.value) return
-
-        input.disabled = true
-        button.disabled = true
-        message.textContent = ''
-
-        try {
-          const response = await fetch('/api/verify-access', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password: input.value }),
-          })
-
-          if (response.ok) {
-            location.replace(safeNext())
-            return
-          }
-
-          message.textContent =
-            response.status === 429
-              ? 'Too many attempts. Try again shortly.'
-              : response.status === 401
-                ? 'Incorrect password.'
-                : 'Something went wrong.'
-        } catch {
-          message.textContent = 'Could not reach the server.'
-        }
-
-        input.value = ''
-        input.disabled = false
-        button.disabled = false
-        input.focus()
-      })
-
       // — Interest list —
       const signupForm = document.getElementById('signup')
       const nameField = document.getElementById('name')
@@ -308,6 +464,8 @@
         event.preventDefault()
 
         signupButton.disabled = true
+        nameField.disabled = true
+        emailField.disabled = true
         signupButton.textContent = 'Sending'
         signupMessage.textContent = ''
 
@@ -319,8 +477,10 @@
           })
 
           if (response.ok) {
-            signupForm.remove()
-            signupMessage.textContent = 'Thank you — we’ll be in touch.'
+            const thanks = document.createElement('p')
+            thanks.className = 'thanks'
+            thanks.textContent = 'Thank you — we’ll be in touch.'
+            signupForm.replaceWith(thanks)
             return
           }
 
@@ -335,7 +495,80 @@
         }
 
         signupButton.disabled = false
+        nameField.disabled = false
+        emailField.disabled = false
         signupButton.textContent = 'Notify me'
+      })
+
+      // — Password modal —
+      // <dialog> is doing the heavy lifting here: showModal() gives focus
+      // trapping, Esc-to-close and the inert backdrop for free.
+      const lock = document.getElementById('lock')
+      const dialog = document.getElementById('gate-dialog')
+      const gateForm = document.getElementById('gate')
+      const passwordField = document.getElementById('password')
+      const gateButton = gateForm.querySelector('button')
+      const gateMessage = document.getElementById('gate-message')
+
+      lock.addEventListener('click', () => {
+        gateMessage.textContent = ''
+        dialog.showModal()
+        passwordField.focus()
+      })
+
+      document.getElementById('gate-close').addEventListener('click', () => dialog.close())
+
+      // Clicking the backdrop closes; clicks inside the card must not.
+      dialog.addEventListener('click', (event) => {
+        if (event.target === dialog) dialog.close()
+      })
+
+      // Send focus back where it came from, however the dialog was dismissed.
+      dialog.addEventListener('close', () => {
+        passwordField.value = ''
+        lock.focus()
+      })
+
+      /** Only same-site relative paths, so ?next= can't bounce people off-site. */
+      function safeNext() {
+        const value = new URLSearchParams(location.search).get('next')
+        return value && /^\/(?!\/)/.test(value) ? value : '/'
+      }
+
+      gateForm.addEventListener('submit', async (event) => {
+        event.preventDefault()
+        if (!passwordField.value) return
+
+        passwordField.disabled = true
+        gateButton.disabled = true
+        gateMessage.textContent = ''
+
+        try {
+          const response = await fetch('/api/verify-access', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: passwordField.value }),
+          })
+
+          if (response.ok) {
+            location.replace(safeNext())
+            return
+          }
+
+          gateMessage.textContent =
+            response.status === 429
+              ? 'Too many attempts. Try again shortly.'
+              : response.status === 401
+                ? 'Incorrect password.'
+                : 'Something went wrong.'
+        } catch {
+          gateMessage.textContent = 'Could not reach the server.'
+        }
+
+        passwordField.value = ''
+        passwordField.disabled = false
+        gateButton.disabled = false
+        passwordField.focus()
       })
     </script>
   </body>
