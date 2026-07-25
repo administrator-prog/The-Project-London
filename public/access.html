@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#f6f4ef" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>The Project London</title>
+
+    <!--
+      Deliberately standalone: no /assets/* imports, because the middleware
+      gates those. Everything this page needs is inline or on the CDN.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@500&family=Inter:wght@300;400&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      :root {
+        --ink: #0a0a0a;
+        --bone: #f6f4ef;
+        --ash: #9a958c;
+        --ease: cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100svh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        background: var(--bone);
+        color: var(--ink);
+        font-family: Inter, system-ui, sans-serif;
+        font-weight: 300;
+        -webkit-font-smoothing: antialiased;
+      }
+      .panel {
+        width: 100%;
+        max-width: 28rem;
+        text-align: center;
+        animation: rise 0.8s var(--ease) both;
+      }
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+      }
+      .logo {
+        height: 3rem;
+        width: auto;
+      }
+      .label {
+        margin: 2.5rem 0 0;
+        font-family: Archivo, system-ui, sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        font-size: 0.6875rem;
+        font-weight: 500;
+        color: var(--ash);
+      }
+      form {
+        position: relative;
+        display: flex;
+        align-items: center;
+        margin-top: 1.5rem;
+        border-bottom: 1px solid rgba(10, 10, 10, 0.3);
+        transition: border-color 0.4s var(--ease);
+      }
+      form:focus-within {
+        border-bottom-color: var(--ink);
+      }
+      input {
+        width: 100%;
+        height: 3.5rem;
+        padding-right: 3rem;
+        border: 0;
+        background: transparent;
+        text-align: center;
+        font: inherit;
+        font-size: 1rem;
+        color: var(--ink);
+      }
+      input::placeholder {
+        color: var(--ash);
+      }
+      input:focus {
+        outline: none;
+      }
+      input:disabled {
+        opacity: 0.5;
+      }
+      button {
+        position: absolute;
+        right: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.5rem;
+        height: 2.5rem;
+        border: 0;
+        background: transparent;
+        color: var(--ink);
+        cursor: pointer;
+        transition: transform 0.5s var(--ease);
+      }
+      button:hover:not(:disabled) {
+        transform: translateX(4px);
+      }
+      button:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+      .message {
+        min-height: 1rem;
+        margin: 1.25rem 0 0;
+        font-size: 0.75rem;
+        color: var(--ink);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.001ms !important;
+          transition-duration: 0.001ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="panel">
+      <img
+        class="logo"
+        src="https://cdn.estateonline.ai/The%20Project%20London/BLACK%20FONT%20(1).png"
+        alt="The Project London"
+      />
+
+      <p class="label">By invitation</p>
+
+      <form id="gate">
+        <input
+          id="password"
+          type="password"
+          name="password"
+          placeholder="Password"
+          aria-label="Password"
+          autocomplete="current-password"
+          required
+          autofocus
+        />
+        <button type="submit" aria-label="Enter">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+      </form>
+
+      <p class="message" id="message" role="alert"></p>
+    </main>
+
+    <script>
+      const form = document.getElementById('gate')
+      const input = document.getElementById('password')
+      const button = form.querySelector('button')
+      const message = document.getElementById('message')
+
+      /** Only same-site relative paths, so ?next= can't bounce people off-site. */
+      function safeNext() {
+        const value = new URLSearchParams(location.search).get('next')
+        return value && /^\/(?!\/)/.test(value) ? value : '/'
+      }
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault()
+        if (!input.value) return
+
+        input.disabled = true
+        button.disabled = true
+        message.textContent = ''
+
+        try {
+          const response = await fetch('/api/verify-access', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: input.value }),
+          })
+
+          if (response.ok) {
+            location.replace(safeNext())
+            return
+          }
+
+          message.textContent =
+            response.status === 429
+              ? 'Too many attempts. Try again shortly.'
+              : response.status === 401
+                ? 'Incorrect password.'
+                : 'Something went wrong.'
+        } catch {
+          message.textContent = 'Could not reach the server.'
+        }
+
+        input.value = ''
+        input.disabled = false
+        button.disabled = false
+        input.focus()
+      })
+    </script>
+  </body>
+</html>
