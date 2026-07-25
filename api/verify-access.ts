@@ -1,4 +1,3 @@
-import { ipAddress } from '@vercel/functions'
 import {
   COOKIE_NAME,
   MAX_AGE_SECONDS,
@@ -6,33 +5,11 @@ import {
   isSameOrigin,
   passwordMatches,
 } from '../lib/access'
+import { clientKey, createRateLimiter } from '../lib/rate-limit'
 
 export const config = { runtime: 'edge' }
 
-const MAX_ATTEMPTS = 8
-const WINDOW_MS = 10 * 60 * 1000
-
-/**
- * Per-instance attempt counter.
- *
- * Edge instances are short-lived and there may be several running at once, so
- * this slows a brute force down rather than stopping it outright. For a hard
- * limit, back this with Vercel KV or Upstash and key on the same IP.
- */
-const attempts = new Map<string, { count: number; resetAt: number }>()
-
-function rateLimited(ip: string) {
-  const now = Date.now()
-  const entry = attempts.get(ip)
-
-  if (!entry || entry.resetAt < now) {
-    attempts.set(ip, { count: 1, resetAt: now + WINDOW_MS })
-    return false
-  }
-
-  entry.count += 1
-  return entry.count > MAX_ATTEMPTS
-}
+const limiter = createRateLimiter({ max: 8, windowMs: 10 * 60 * 1000 })
 
 function json(body: unknown, status: number, headers: Record<string, string> = {}) {
   return new Response(JSON.stringify(body), {
@@ -55,8 +32,8 @@ export default async function handler(request: Request) {
     return json({ ok: false, error: 'not_configured' }, 500)
   }
 
-  const ip = ipAddress(request) ?? 'unknown'
-  if (rateLimited(ip)) {
+  const ip = clientKey(request)
+  if (limiter.check(ip)) {
     return json({ ok: false, error: 'rate_limited' }, 429, { 'Retry-After': '600' })
   }
 
@@ -74,7 +51,7 @@ export default async function handler(request: Request) {
     return json({ ok: false }, 401)
   }
 
-  attempts.delete(ip)
+  limiter.reset(ip)
 
   const token = await createToken(secret)
   const secure = new URL(request.url).protocol === 'https:' ? ' Secure;' : ''

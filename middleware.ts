@@ -14,10 +14,17 @@ import { COOKIE_NAME, readCookie, verifyToken } from './lib/access'
  * imports: it has to render before any bundle is reachable.
  */
 
-const PUBLIC_PATHS = new Set(['/access', '/access.html', '/api/verify-access', '/favicon.svg'])
+const PUBLIC_PATHS = new Set([
+  '/access',
+  '/access.html',
+  '/api/verify-access',
+  // The gate page's interest-list form posts here, so it sits outside the wall.
+  '/api/subscribe',
+  '/favicon.svg',
+])
 
 export const config = {
-  matcher: ['/((?!api/verify-access|access\\.html|favicon\\.svg).*)'],
+  matcher: ['/((?!api/verify-access|api/subscribe|access\\.html|favicon\\.svg).*)'],
 }
 
 /**
