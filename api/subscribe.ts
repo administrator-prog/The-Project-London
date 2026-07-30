@@ -5,7 +5,7 @@ export const config = { runtime: 'edge' }
 
 /**
  * Forwards interest-list signups from the gate page to the LeadConnector
- * inbound webhook.
+ * inbound webhook, minus the ones that fail the bot checks below.
  *
  * Proxied server-side rather than posted from the browser: it sidesteps CORS,
  * and it keeps the webhook URL off a page that anyone on the internet can
@@ -22,6 +22,13 @@ const limiter = createRateLimiter({ max: 5, windowMs: 10 * 60 * 1000 })
 const MAX_NAME = 120
 const MAX_EMAIL = 254
 
+/**
+ * Shortest time a person plausibly spends on the form. Typing a name and an
+ * email takes seconds even for a fast typist on a phone with autofill; scripts
+ * submit the moment the page parses.
+ */
+const MIN_FILL_MS = 1500
+
 function json(body: unknown, status: number, headers: Record<string, string> = {}) {
   return new Response(JSON.stringify(body), {
     status,
@@ -32,6 +39,14 @@ function json(body: unknown, status: number, headers: Record<string, string> = {
 /** Deliberately permissive — the CRM is the authority on deliverability. */
 function looksLikeEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value)
+}
+
+/**
+ * A link or markup in the name field. People type their name here; the only
+ * things that paste a URL into it are the link-stuffing spam scripts.
+ */
+function looksLikeSpam(name: string) {
+  return /https?:\/\/|www\.|\[url|<a\s|[<>]/i.test(name)
 }
 
 export default async function handler(request: Request) {
@@ -45,16 +60,50 @@ export default async function handler(request: Request) {
 
   let name = ''
   let email = ''
+  let trap = ''
+  let elapsed: number | undefined
   try {
-    const body = (await request.json()) as { name?: unknown; email?: unknown }
+    const body = (await request.json()) as {
+      name?: unknown
+      email?: unknown
+      reference?: unknown
+      elapsed?: unknown
+    }
     if (typeof body?.name === 'string') name = body.name.trim().slice(0, MAX_NAME)
     if (typeof body?.email === 'string') email = body.email.trim().slice(0, MAX_EMAIL).toLowerCase()
+    if (typeof body?.reference === 'string') trap = body.reference.trim()
+    if (typeof body?.elapsed === 'number' && Number.isFinite(body.elapsed)) elapsed = body.elapsed
   } catch {
     // Malformed body falls through to the validation below.
   }
 
   if (!name || !looksLikeEmail(email)) {
     return json({ ok: false, error: 'invalid' }, 400)
+  }
+
+  /*
+   * Bot checks. All three answer with the same 200 a real signup gets, and
+   * nothing goes to the CRM: a rejection tells whoever is scripting this which
+   * check caught them, and they retune until they get through. Silence looks
+   * like success, so they keep sending mail nobody reads.
+   *
+   * `elapsed` missing is treated as fine rather than suspicious — a visitor on
+   * a cached copy of the page from before this shipped would not send it, and
+   * losing a real signup is worse than passing a spam one on to the inbox.
+   */
+  if (trap) {
+    console.warn('Dropped signup: honeypot filled', { email, trapLength: trap.length })
+    return json({ ok: true }, 200)
+  }
+
+  if (elapsed !== undefined && elapsed < MIN_FILL_MS) {
+    console.warn('Dropped signup: submitted too fast', { email, elapsed })
+    return json({ ok: true }, 200)
+  }
+
+  if (looksLikeSpam(name)) {
+    console.warn('Dropped signup: link in the name field', { email })
+    return json({ ok: true }, 200)
   }
 
   // Split for CRMs that expect discrete name fields; `name` is sent as well so

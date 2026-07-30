@@ -212,6 +212,21 @@
         opacity: 0.45;
         cursor: default;
       }
+      /*
+        The honeypot. Taken out of flow and parked off-screen instead of
+        display:none, because some form-fillers skip fields they can tell are
+        unrendered. Never focusable, never announced — see the field itself.
+      */
+      .signup .trap {
+        position: absolute;
+        left: -9999px;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        border: 0;
+        opacity: 0;
+        pointer-events: none;
+      }
 
       .message {
         min-height: 1.25rem;
@@ -392,6 +407,22 @@
 
       <div class="rise">
         <form class="signup" id="signup">
+          <!--
+            Bait for bots: plausible enough that a script filling every input
+            will fill it, invisible and unreachable for anyone using the page.
+            Not `required`, so it can never block a real submission — anything
+            that arrives in it means a script typed it, and the server discards
+            that signup. `autocomplete="off"` keeps browser autofill out of it.
+          -->
+          <input
+            class="trap"
+            id="reference"
+            type="text"
+            name="reference"
+            tabindex="-1"
+            autocomplete="off"
+            aria-hidden="true"
+          />
           <input
             id="name"
             type="text"
@@ -458,8 +489,13 @@
       const signupForm = document.getElementById('signup')
       const nameField = document.getElementById('name')
       const emailField = document.getElementById('email')
+      const trapField = document.getElementById('reference')
       const signupButton = signupForm.querySelector('button')
       const signupMessage = document.getElementById('signup-message')
+
+      // How long the form was on screen before it was submitted. Filling in a
+      // name and an email takes a person seconds; scripts post instantly.
+      const openedAt = Date.now()
 
       signupForm.addEventListener('submit', async (event) => {
         event.preventDefault()
@@ -474,7 +510,12 @@
           const response = await fetch('/api/subscribe', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: nameField.value, email: emailField.value }),
+            body: JSON.stringify({
+              name: nameField.value,
+              email: emailField.value,
+              reference: trapField.value,
+              elapsed: Date.now() - openedAt,
+            }),
           })
 
           if (response.ok) {
