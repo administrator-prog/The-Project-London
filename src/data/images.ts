@@ -90,6 +90,7 @@ export const BRAND = {
 } as const
 
 export const MEDIA = {
+  homeHero: `${CDN}/Shoot/IMG_1031.webp`,
   heroDesktop: `${CDN}/Home%20Hero%20Desktop.mp4`,
   heroMobile: `${CDN}/Home%20Hero%20Mobile.mp4`,
   campaignFeature: `${CDN}/FEATURE%20SECTION.JPG`,

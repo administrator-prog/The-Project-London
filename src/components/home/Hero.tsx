@@ -22,7 +22,7 @@ export function Hero() {
       {/* Image */}
       <motion.div style={{ y: imageY, scale }} className="absolute inset-0 will-change-transform">
         <img
-          src={MEDIA.campaignFeature}
+          src={MEDIA.homeHero}
           alt="The Project London — Volume 04"
           className="h-full w-full object-cover"
         />
