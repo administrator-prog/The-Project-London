@@ -39,14 +39,14 @@ export function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, ease: EASE_OUT_EXPO, delay: 0.4 }}
         >
-          <Link to={hero.cta.href} className="group inline-flex items-center gap-3 label text-base text-bone">
-            <span className="border-b border-bone/50 pb-2.5 transition-colors duration-500 group-hover:border-bone">
+          <Link to={hero.cta.href} className="group inline-flex items-center gap-3.5 label text-[1.2rem] text-bone">
+            <span className="border-b border-bone/50 pb-3 transition-colors duration-500 group-hover:border-bone">
               {hero.cta.label}
             </span>
             <ArrowRight
-              size={18}
+              size={22}
               strokeWidth={1.25}
-              className="mb-2.5 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-x-1"
+              className="mb-3 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-x-1"
             />
           </Link>
         </motion.div>
