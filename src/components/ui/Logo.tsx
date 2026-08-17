@@ -2,6 +2,11 @@ import { Link } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { BRAND } from '@/data/images'
 
+/** Intrinsic pixel size of the wordmark artwork — declared so the browser
+ *  reserves the right box before the image loads. */
+const LOGO_W = 8325
+const LOGO_H = 1819
+
 interface LogoProps {
   className?: string
   /** Stacked = oversized footer wordmark; inline = nav / menu wordmark. */
@@ -31,13 +36,17 @@ export function Logo({ className, variant = 'inline', light = false, onClick }: 
         <img
           src={light ? BRAND.logoLight : BRAND.logoDark}
           alt="The Project London"
-          className="h-16 w-auto sm:h-20 md:h-28"
+          width={LOGO_W}
+          height={LOGO_H}
+          className="h-auto w-[18rem] max-w-full sm:w-[23rem] md:w-[32rem]"
         />
       </Link>
     )
   }
 
-  const size = 'h-11 w-auto md:h-14'
+  // Fixed width, auto height: the wordmark is identical at every breakpoint and
+  // its aspect ratio is never squeezed by the surrounding flex row.
+  const size = 'h-auto w-[12.5rem] max-w-none'
   return (
     <Link
       to="/"
@@ -48,12 +57,16 @@ export function Logo({ className, variant = 'inline', light = false, onClick }: 
       <img
         src={BRAND.logoDark}
         alt="The Project London"
+        width={LOGO_W}
+        height={LOGO_H}
         className={cn(size, 'transition-opacity duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]', light ? 'opacity-0' : 'opacity-100')}
       />
       <img
         src={BRAND.logoLight}
         alt=""
         aria-hidden
+        width={LOGO_W}
+        height={LOGO_H}
         className={cn(size, 'absolute left-0 top-0 transition-opacity duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]', light ? 'opacity-100' : 'opacity-0')}
       />
     </Link>

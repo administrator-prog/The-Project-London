@@ -33,7 +33,7 @@ export function Navbar({ heroMode = false, scrolled = false }: NavbarProps) {
           )}
         >
           {/* Left — menu trigger */}
-          <div className="flex flex-1 items-center">
+          <div className="flex min-w-0 flex-1 items-center">
             <button
               onClick={() => setMenuOpen((o) => !o)}
               className={cn('group flex items-center gap-3', light ? 'text-bone' : 'text-ink')}
@@ -58,12 +58,12 @@ export function Navbar({ heroMode = false, scrolled = false }: NavbarProps) {
           </div>
 
           {/* Center — wordmark */}
-          <div className="flex flex-1 justify-center">
+          <div className="flex shrink-0 justify-center">
             <Logo variant="inline" light={light} onClick={() => setMenuOpen(false)} />
           </div>
 
           {/* Right — utilities */}
-          <div className={cn('flex flex-1 items-center justify-end gap-5', light ? 'text-bone' : 'text-ink')}>
+          <div className={cn('flex min-w-0 flex-1 items-center justify-end gap-5', light ? 'text-bone' : 'text-ink')}>
             <button aria-label="Search" className="hidden p-1 transition-opacity hover:opacity-60 sm:block">
               <Search size={19} strokeWidth={1.25} />
             </button>
