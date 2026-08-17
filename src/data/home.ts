@@ -7,7 +7,7 @@ import { MEDIA } from './images'
 
 export const hero = {
   line: 'Built to outlast\nthe *season*.',
-  cta: { label: 'Shop the Collection', href: '/collections/new' },
+  cta: { label: 'Shop the collection', href: '/collections/new' },
 }
 
 export const statement = {

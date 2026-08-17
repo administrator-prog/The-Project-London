@@ -1,7 +1,10 @@
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { useRef } from 'react'
-import { ArrowDown } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { ArrowDown, ArrowRight } from 'lucide-react'
 import { MEDIA } from '@/data/images'
+import { hero } from '@/data/home'
+import { EASE_OUT_EXPO } from '@/lib/motion'
 
 export function Hero() {
   const ref = useRef<HTMLDivElement>(null)
@@ -10,6 +13,8 @@ export function Hero() {
   const imageY = useTransform(scrollYProgress, [0, 1], ['0%', '15%'])
   const scale = useTransform(scrollYProgress, [0, 1], [1.02, 1.14])
   const overlay = useTransform(scrollYProgress, [0, 1], [0.08, 0.28])
+  const ctaY = useTransform(scrollYProgress, [0, 1], ['0%', '-28%'])
+  const ctaOpacity = useTransform(scrollYProgress, [0, 0.7], [1, 0])
 
   return (
     <section ref={ref} className="relative h-[100svh] min-h-[640px] w-full overflow-hidden bg-ink">
@@ -22,6 +27,27 @@ export function Hero() {
         />
         <motion.div style={{ opacity: overlay }} className="absolute inset-0 bg-ink" />
         <div className="absolute inset-0 bg-gradient-to-t from-ink/35 via-transparent to-ink/10" />
+      </motion.div>
+
+      {/* Call to action */}
+      <motion.div
+        style={{ y: ctaY, opacity: ctaOpacity }}
+        className="relative z-10 mx-auto flex h-full max-w-[100rem] flex-col justify-end px-gutter pb-16 md:pb-24"
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1, ease: EASE_OUT_EXPO, delay: 0.4 }}
+        >
+          <Link to={hero.cta.href} className="group inline-flex items-center gap-2.5 label text-bone">
+            <span className="link-underline pb-1">{hero.cta.label}</span>
+            <ArrowRight
+              size={15}
+              strokeWidth={1.25}
+              className="transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-x-1"
+            />
+          </Link>
+        </motion.div>
       </motion.div>
 
       {/* Scroll cue */}
