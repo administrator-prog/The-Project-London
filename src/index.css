@@ -125,6 +125,21 @@
     line-height: 1;
   }
 
+  /*
+    Oversized label, for a lone call to action carrying a full-bleed image.
+    A size belongs here rather than on a `text-*` utility beside `.label`:
+    these rules sit at the end of the utilities layer, so at equal specificity
+    they win, and the utility would be silently dropped.
+  */
+  .label-lg {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: clamp(1rem, 1.7vw, 1.5rem);
+    font-weight: 500;
+    line-height: 1;
+  }
+
   .text-hero {
     font-size: var(--text-hero);
     line-height: var(--text-hero--line-height);
