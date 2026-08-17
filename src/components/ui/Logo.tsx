@@ -44,22 +44,31 @@ export function Logo({ className, variant = 'inline', light = false, onClick }: 
     )
   }
 
-  // Fixed width, auto height: the wordmark is identical at every breakpoint and
-  // its aspect ratio is never squeezed by the surrounding flex row.
-  const size = 'h-auto w-[12.5rem] max-w-none'
+  /**
+   * The artwork carries a lot of transparent margin — the lettering is only
+   * ~70% of the file's width and ~30% of its height, sitting at (48%, 52.6%)
+   * of the canvas. Rendering the whole canvas in a fixed-height bar therefore
+   * wastes most of the space on nothing. Instead the frame is sized to the
+   * lettering alone and the oversized artwork is centred on its own ink, so
+   * the wordmark reads large without the bar growing to fit the margins.
+   */
+  const size = cn(
+    'absolute left-1/2 top-1/2 h-auto w-[18.5rem] max-w-none -translate-x-[48%] -translate-y-[52.6%]',
+    'transition-opacity duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]',
+  )
   return (
     <Link
       to="/"
       onClick={onClick}
       aria-label="The Project London — home"
-      className={cn('relative block', className)}
+      className={cn('relative block h-6 w-[13.5rem] overflow-hidden', className)}
     >
       <img
         src={BRAND.logoDark}
         alt="The Project London"
         width={LOGO_W}
         height={LOGO_H}
-        className={cn(size, 'transition-opacity duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]', light ? 'opacity-0' : 'opacity-100')}
+        className={cn(size, light ? 'opacity-0' : 'opacity-100')}
       />
       <img
         src={BRAND.logoLight}
@@ -67,7 +76,7 @@ export function Logo({ className, variant = 'inline', light = false, onClick }: 
         aria-hidden
         width={LOGO_W}
         height={LOGO_H}
-        className={cn(size, 'absolute left-0 top-0 transition-opacity duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]', light ? 'opacity-100' : 'opacity-0')}
+        className={cn(size, light ? 'opacity-100' : 'opacity-0')}
       />
     </Link>
   )
