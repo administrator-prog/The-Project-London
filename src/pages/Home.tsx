@@ -1,6 +1,7 @@
 import {
   Intro,
   Hero,
+  FirstCollection,
   Manifesto,
   ChapterFilm,
   TheDresses,
@@ -13,6 +14,7 @@ export default function Home() {
     <>
       <Intro />
       <Hero />
+      <FirstCollection />
       <TheDresses />
       <ChapterFilm image={MEDIA.dressFeature2} />
       <Manifesto />

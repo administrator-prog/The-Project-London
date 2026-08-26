@@ -61,7 +61,7 @@ export function Intro() {
             transition={{ duration: 0.8, delay: 0.9 }}
             className="mt-6 label-sm text-bone/40"
           >
-            Volume 04 — Winter
+            The First Collection
           </motion.span>
         </motion.div>
       )}

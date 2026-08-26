@@ -1,5 +1,6 @@
 export { Intro } from './Intro'
 export { Hero } from './Hero'
+export { FirstCollection } from './FirstCollection'
 export { Manifesto } from './Manifesto'
 export { ChapterFilm } from './ChapterFilm'
 export { TheDresses } from './TheDresses'
