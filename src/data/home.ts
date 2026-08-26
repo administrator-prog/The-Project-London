@@ -1,5 +1,3 @@
-import { MEDIA } from './images'
-
 /**
  * Homepage copy — deliberately sparse. A minimal, image-led brand says little
  * and lets the film carry the feeling.
@@ -7,7 +5,7 @@ import { MEDIA } from './images'
 
 export const hero = {
   line: 'Built to outlast\nthe *season*.',
-  cta: { label: 'Shop the collection', href: '/collections/new' },
+  cta: { label: 'Shop the collection', href: '/shop' },
 }
 
 export const statement = {
@@ -18,29 +16,8 @@ export const statement = {
 
 export const chapter = {
   title: 'In *motion*.',
-  cta: { label: 'Watch the Film', href: '/editorial/winter-volume-04' },
+  cta: { label: 'View the collection', href: '/shop' },
 }
-
-/** The whole collection — two pieces, shown side by side.
- *  `objectPosition` reframes each film so the dress stays in view. */
-export const dresses = [
-  {
-    name: 'The Florence',
-    price: '£295',
-    video: MEDIA.dress1,
-    poster: MEDIA.campaignFeature,
-    objectPosition: '50% 22%',
-    href: '/products/the-florence',
-  },
-  {
-    name: 'The Pearl',
-    price: '£320',
-    video: MEDIA.dress2,
-    poster: MEDIA.campaignFeature,
-    objectPosition: '50% 70%',
-    href: '/products/the-pearl',
-  },
-]
 
 export const invitation = {
   eyebrow: 'The Project',

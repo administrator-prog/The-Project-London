@@ -1,43 +1,34 @@
 import { useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, Navigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Heart, Plus, Minus, Truck, RotateCcw } from 'lucide-react'
-import { products } from '@/data/products'
+import { Plus, Minus, Truck, RotateCcw } from 'lucide-react'
+import { products, getProduct } from '@/data/products'
+import { sized } from '@/data/images'
 import { formatPrice, cn } from '@/lib/utils'
 import { Container } from '@/components/ui/Container'
 import { Section } from '@/components/ui/Section'
 import { SectionHeading } from '@/components/ui/SectionHeading'
 import { Button } from '@/components/ui/Button'
-import { ProductGrid } from '@/components/product/ProductGrid'
+import { ProductCard } from '@/components/product/ProductCard'
 import { EASE_OUT_EXPO } from '@/lib/motion'
-
-const accordions = [
-  {
-    title: 'Details & Fit',
-    body: 'Relaxed, true-to-size fit. Model is 6\'1" and wears a size M. Composition and precise measurements available on request.',
-  },
-  {
-    title: 'Materials & Care',
-    body: 'Crafted from responsibly sourced natural fibres. Wash cold, reshape while damp, dry flat. Do not tumble dry.',
-  },
-  {
-    title: 'Shipping & Returns',
-    body: 'Complimentary express shipping on orders over £150. Free 30-day returns on all unworn pieces.',
-  },
-]
 
 export default function Product() {
   const { id } = useParams()
-  const product = products.find((p) => p.id === id) ?? products[0]
+  const product = getProduct(id)
 
   const [activeImage, setActiveImage] = useState(0)
-  const [activeColor, setActiveColor] = useState(0)
   const [activeSize, setActiveSize] = useState<string | null>(null)
-  const [openAccordion, setOpenAccordion] = useState<string | null>('Details & Fit')
-  const [saved, setSaved] = useState(false)
+  const [openAccordion, setOpenAccordion] = useState<string | null>('Size & Fit')
 
-  const gallery = [product.image, product.imageHover]
-  const related = products.filter((p) => p.id !== product.id).slice(0, 4)
+  if (!product) return <Navigate to="/shop" replace />
+
+  const other = products.find((p) => p.id !== product.id)
+
+  const accordions = [
+    { title: 'Size & Fit', body: product.fit },
+    { title: 'Composition & Care', body: product.care },
+    { title: 'Shipping, Exchange & Returns', body: product.shipping },
+  ]
 
   return (
     <div className="bg-paper pb-8">
@@ -45,7 +36,7 @@ export default function Product() {
         <nav className="mb-8 flex items-center gap-2 label-sm text-ash">
           <Link to="/" className="hover:text-ink">Home</Link>
           <span className="text-stone">/</span>
-          <Link to="/collections/all" className="hover:text-ink">{product.category}</Link>
+          <Link to="/shop" className="hover:text-ink">Shop</Link>
           <span className="text-stone">/</span>
           <span className="text-ink">{product.name}</span>
         </nav>
@@ -54,91 +45,81 @@ export default function Product() {
       <Container>
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-16">
           {/* Gallery */}
-          <div className="flex flex-col-reverse gap-4 md:flex-row">
-            <div className="flex gap-3 md:flex-col">
-              {gallery.map((src, i) => (
-                <button
-                  key={i}
-                  onMouseEnter={() => setActiveImage(i)}
-                  onClick={() => setActiveImage(i)}
-                  className={cn(
-                    'relative aspect-[3/4] w-16 shrink-0 overflow-hidden bg-sand md:w-20 ring-1 ring-inset transition-all',
-                    activeImage === i ? 'ring-ink' : 'ring-transparent hover:ring-line',
-                  )}
-                >
-                  <img src={src} alt="" className="h-full w-full object-cover" />
-                </button>
-              ))}
+          <div>
+            {/* Small screens — swipeable. Keeps the price and size selector
+                within reach instead of behind a thirteen-image scroll. */}
+            <div className="lg:hidden">
+              <div
+                onScroll={(e) => {
+                  const el = e.currentTarget
+                  const slide = el.scrollWidth / product.images.length
+                  setActiveImage(Math.min(Math.round(el.scrollLeft / slide), product.images.length - 1))
+                }}
+                className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto"
+              >
+                {product.images.map((src, i) => (
+                  <div
+                    key={src}
+                    className="aspect-[3/4] w-full shrink-0 snap-center overflow-hidden bg-sand"
+                  >
+                    <img
+                      src={sized(src, 900)}
+                      alt={`${product.name} — view ${i + 1}`}
+                      loading={i === 0 ? 'eager' : 'lazy'}
+                      decoding="async"
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex items-center justify-center gap-3 label-sm text-ash">
+                <span className="text-ink">{String(activeImage + 1).padStart(2, '0')}</span>
+                <span className="h-px w-6 bg-line" />
+                <span>{String(product.images.length).padStart(2, '0')}</span>
+              </div>
             </div>
-            <div className="relative aspect-[3/4] flex-1 overflow-hidden bg-sand">
-              <AnimatePresence mode="wait">
-                <motion.img
-                  key={activeImage}
-                  initial={{ opacity: 0, scale: 1.03 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.6, ease: EASE_OUT_EXPO }}
-                  src={gallery[activeImage]}
-                  alt={product.name}
-                  className="absolute inset-0 h-full w-full object-cover"
-                />
-              </AnimatePresence>
+
+            {/* Large screens — the full stack, scrolling past the sticky info. */}
+            <div className="hidden lg:flex lg:flex-col lg:gap-4">
+              {product.images.map((src, i) => (
+                <div key={src} className="aspect-[3/4] overflow-hidden bg-sand">
+                  <img
+                    src={sized(src, 1400)}
+                    alt={`${product.name} — view ${i + 1}`}
+                    loading={i === 0 ? 'eager' : 'lazy'}
+                    decoding="async"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              ))}
             </div>
           </div>
 
           {/* Info */}
           <div className="lg:sticky lg:top-32 lg:h-fit lg:py-4">
             <span className="label-sm text-ash">{product.category}</span>
-            <h1 className="mt-3 font-serif text-3xl font-semibold tracking-tight text-ink md:text-[2.75rem] md:leading-[1.05]">
+            <h1 className="mt-3 font-serif text-3xl font-medium tracking-tight text-ink md:text-[2.75rem] md:leading-[1.05]">
               {product.name}
             </h1>
-            <div className="mt-4 flex items-center gap-3">
-              <span className="text-xl text-ink">{formatPrice(product.price)}</span>
-              {product.compareAtPrice && (
-                <span className="text-lg text-ash line-through">
-                  {formatPrice(product.compareAtPrice)}
-                </span>
-              )}
-            </div>
+            <span className="mt-4 block text-xl text-ink">{formatPrice(product.price)}</span>
 
-            {/* Colours */}
-            <div className="mt-9">
-              <div className="mb-3 flex items-center justify-between">
-                <span className="label-sm text-ink">Colour</span>
-                <span className="label-sm text-ash">{product.colors[activeColor].name}</span>
-              </div>
-              <div className="flex gap-2.5">
-                {product.colors.map((color, i) => (
-                  <button
-                    key={color.name}
-                    onClick={() => setActiveColor(i)}
-                    aria-label={color.name}
-                    className={cn(
-                      'relative h-9 w-9 rounded-full ring-1 ring-inset ring-ink/10 transition-transform',
-                      activeColor === i && 'scale-105',
-                    )}
-                    style={{ backgroundColor: color.hex }}
-                  >
-                    <span
-                      className={cn(
-                        'absolute -inset-[3px] rounded-full border border-ink transition-opacity',
-                        activeColor === i ? 'opacity-100' : 'opacity-0',
-                      )}
-                    />
-                  </button>
-                ))}
-              </div>
-            </div>
+            <p className="mt-7 max-w-md text-[0.95rem] leading-relaxed text-fog">
+              {product.description}
+            </p>
+
+            <ul className="mt-6 space-y-2">
+              {product.details.map((d) => (
+                <li key={d} className="flex gap-3 text-sm leading-relaxed text-fog">
+                  <span aria-hidden className="mt-2 h-px w-3 shrink-0 bg-stone" />
+                  {d}
+                </li>
+              ))}
+            </ul>
 
             {/* Sizes */}
-            <div className="mt-8">
-              <div className="mb-3 flex items-center justify-between">
-                <span className="label-sm text-ink">Size</span>
-                <button className="label-sm text-ash underline underline-offset-4 hover:text-ink">
-                  Size Guide
-                </button>
-              </div>
-              <div className="grid grid-cols-5 gap-2">
+            <div className="mt-9">
+              <span className="label-sm text-ink">Size</span>
+              <div className="mt-3 grid grid-cols-4 gap-2">
                 {product.sizes.map((size) => (
                   <button
                     key={size}
@@ -157,34 +138,25 @@ export default function Product() {
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="mt-9 flex gap-3">
-              <Button
-                variant="solid"
-                size="lg"
-                className="h-14 flex-1"
-                disabled={product.soldOut}
-              >
-                {product.soldOut ? 'Sold Out' : activeSize ? 'Add to Bag' : 'Select a Size'}
-              </Button>
-              <button
-                onClick={() => setSaved((s) => !s)}
-                aria-label="Add to wishlist"
-                className="flex h-14 w-14 shrink-0 items-center justify-center border border-line text-ink transition-colors hover:border-ink"
-              >
-                <Heart size={20} strokeWidth={1.5} className={saved ? 'fill-ink' : ''} />
-              </button>
-            </div>
+            {/* Action */}
+            <Button
+              variant="solid"
+              size="lg"
+              className="mt-8 h-14 w-full"
+              disabled={product.soldOut}
+            >
+              {product.soldOut ? 'Sold Out' : activeSize ? 'Add to Bag' : 'Select a Size'}
+            </Button>
 
             {/* Assurances */}
             <div className="mt-6 grid grid-cols-2 gap-4 border-y border-line py-5">
               <div className="flex items-center gap-3 text-fog">
                 <Truck size={18} strokeWidth={1.25} />
-                <span className="text-xs leading-tight">Free express shipping over £150</span>
+                <span className="text-xs leading-tight">Complimentary UK delivery</span>
               </div>
               <div className="flex items-center gap-3 text-fog">
                 <RotateCcw size={18} strokeWidth={1.25} />
-                <span className="text-xs leading-tight">Free 30-day returns</span>
+                <span className="text-xs leading-tight">14-day returns</span>
               </div>
             </div>
 
@@ -210,7 +182,9 @@ export default function Product() {
                           transition={{ duration: 0.4, ease: EASE_OUT_EXPO }}
                           className="overflow-hidden"
                         >
-                          <p className="pb-6 text-sm leading-relaxed text-fog">{a.body}</p>
+                          <p className="whitespace-pre-line pb-6 text-sm leading-relaxed text-fog">
+                            {a.body}
+                          </p>
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -222,17 +196,21 @@ export default function Product() {
         </div>
       </Container>
 
-      {/* Related */}
-      <Section spacing="lg">
-        <Container>
-          <SectionHeading
-            eyebrow="Complete the Look"
-            title={'You May Also Like'}
-            className="mb-14"
-          />
-          <ProductGrid products={related} />
-        </Container>
-      </Section>
+      {/* The other piece */}
+      {other && (
+        <Section spacing="lg">
+          <Container>
+            <SectionHeading
+              eyebrow="The Collection"
+              title={'The Other Piece'}
+              className="mb-14"
+            />
+            <div className="mx-auto max-w-sm sm:max-w-md">
+              <ProductCard product={other} />
+            </div>
+          </Container>
+        </Section>
+      )}
     </div>
   )
 }

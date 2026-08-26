@@ -1,8 +1,10 @@
-import { useState } from 'react'
-import { Search, ShoppingBag } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
+import { ShoppingBag } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Logo } from '@/components/ui/Logo'
-import { MenuOverlay } from './MenuOverlay'
+import { primaryNav, secondaryNav } from '@/data/navigation'
+import { MobileMenu } from './MobileMenu'
 
 interface NavbarProps {
   /** True on pages with a dark, full-bleed hero directly behind the nav. */
@@ -13,17 +15,27 @@ interface NavbarProps {
 
 export function Navbar({ heroMode = false, scrolled = false }: NavbarProps) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const { pathname } = useLocation()
 
-  // Light (bone) treatment over the hero and over the open menu overlay.
-  const light = menuOpen || (heroMode && !scrolled)
-  const transparent = light
+  // A route change means the panel has done its job.
+  useEffect(() => setMenuOpen(false), [pathname])
+
+  // Light (bone) treatment only over the hero — the mobile panel is paper, so
+  // an open menu always wants the solid, dark-on-light bar.
+  const light = heroMode && !scrolled && !menuOpen
+
+  const linkClass = ({ isActive }: { isActive: boolean }) =>
+    cn(
+      'label whitespace-nowrap pb-1 transition-opacity duration-300 hover:opacity-60',
+      isActive ? 'border-b border-current' : 'border-b border-transparent',
+    )
 
   return (
     <>
       <div
         className={cn(
           'relative z-[90] transition-colors duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]',
-          transparent ? 'bg-transparent' : 'border-b border-line bg-paper/85 backdrop-blur-xl',
+          light ? 'bg-transparent' : 'border-b border-line bg-paper/85 backdrop-blur-xl',
         )}
       >
         <nav
@@ -32,12 +44,28 @@ export function Navbar({ heroMode = false, scrolled = false }: NavbarProps) {
             scrolled && !menuOpen ? 'h-16' : 'h-20',
           )}
         >
-          {/* Left — menu trigger */}
-          <div className="flex min-w-0 flex-1 items-center">
+          {/* Left — the collection (desktop) / menu trigger (small screens) */}
+          <div
+            className={cn(
+              'flex min-w-0 flex-1 items-center',
+              light ? 'text-bone' : 'text-ink',
+            )}
+          >
+            <ul className="hidden items-center gap-7 lg:flex">
+              {primaryNav.map((item) => (
+                <li key={item.href}>
+                  <NavLink to={item.href} className={linkClass}>
+                    {item.label}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+
             <button
               onClick={() => setMenuOpen((o) => !o)}
-              className={cn('group flex items-center gap-3', light ? 'text-bone' : 'text-ink')}
+              className="group flex items-center gap-3 lg:hidden"
               aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={menuOpen}
             >
               <span className="relative block h-3.5 w-6">
                 <span
@@ -62,30 +90,35 @@ export function Navbar({ heroMode = false, scrolled = false }: NavbarProps) {
             <Logo variant="inline" light={light} onClick={() => setMenuOpen(false)} />
           </div>
 
-          {/* Right — utilities */}
-          <div className={cn('flex min-w-0 flex-1 items-center justify-end gap-5', light ? 'text-bone' : 'text-ink')}>
-            <button aria-label="Search" className="hidden p-1 transition-opacity hover:opacity-60 sm:block">
-              <Search size={19} strokeWidth={1.25} />
-            </button>
-            <button aria-label="Shopping bag" className="group relative flex items-center gap-2 p-1 transition-opacity hover:opacity-60">
-              <span className="label hidden md:inline">Bag</span>
-              <span className="relative">
-                <ShoppingBag size={19} strokeWidth={1.25} />
-                <span
-                  className={cn(
-                    'absolute -right-1.5 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[0.5rem] font-semibold',
-                    light ? 'bg-bone text-ink' : 'bg-ink text-bone',
-                  )}
-                >
-                  2
-                </span>
-              </span>
+          {/* Right — pages + bag */}
+          <div
+            className={cn(
+              'flex min-w-0 flex-1 items-center justify-end gap-7',
+              light ? 'text-bone' : 'text-ink',
+            )}
+          >
+            <ul className="hidden items-center gap-7 lg:flex">
+              {secondaryNav.map((item) => (
+                <li key={item.href}>
+                  <NavLink to={item.href} className={linkClass}>
+                    {item.label}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+
+            <button
+              aria-label="Shopping bag"
+              className="flex items-center gap-2 pb-1 transition-opacity hover:opacity-60"
+            >
+              <span className="label hidden xl:inline">Bag</span>
+              <ShoppingBag size={19} strokeWidth={1.25} />
             </button>
           </div>
         </nav>
       </div>
 
-      <MenuOverlay open={menuOpen} onClose={() => setMenuOpen(false)} />
+      <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
     </>
   )
 }

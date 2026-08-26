@@ -6,15 +6,15 @@ interface ProductGridProps {
   products: Product[]
   className?: string
   /** Columns at the largest breakpoint. */
-  columns?: 3 | 4
+  columns?: 2 | 3
 }
 
-export function ProductGrid({ products, className, columns = 4 }: ProductGridProps) {
+export function ProductGrid({ products, className, columns = 2 }: ProductGridProps) {
   return (
     <div
       className={cn(
-        'grid grid-cols-2 gap-x-4 gap-y-10 sm:gap-x-6 md:gap-y-14',
-        columns === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3',
+        'grid grid-cols-1 gap-x-6 gap-y-14 sm:grid-cols-2 md:gap-x-8',
+        columns === 3 && 'lg:grid-cols-3',
         className,
       )}
     >
