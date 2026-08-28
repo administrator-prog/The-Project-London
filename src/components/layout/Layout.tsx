@@ -2,7 +2,6 @@ import { Outlet, useLocation } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import { Header } from './Header'
 import { Footer } from './Footer'
-import { InstagramStrip } from './InstagramStrip'
 import { ScrollToTop } from './ScrollToTop'
 import { PageTransition } from '@/components/ui/PageTransition'
 
@@ -28,7 +27,6 @@ export function Layout() {
         </AnimatePresence>
       </div>
 
-      <InstagramStrip />
       <Footer />
     </div>
   )

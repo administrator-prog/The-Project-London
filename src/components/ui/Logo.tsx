@@ -38,7 +38,7 @@ export function Logo({ className, variant = 'inline', light = false, onClick }: 
           alt="The Project London"
           width={LOGO_W}
           height={LOGO_H}
-          className="h-auto w-[18rem] max-w-full sm:w-[23rem] md:w-[32rem]"
+          className="h-auto w-[15rem] max-w-full sm:w-[19rem] md:w-[24rem]"
         />
       </Link>
     )

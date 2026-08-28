@@ -3,15 +3,23 @@ import { ArrowUp } from 'lucide-react'
 import { footerLinks, socials } from '@/data/navigation'
 import { Container } from '@/components/ui/Container'
 import { Logo } from '@/components/ui/Logo'
+import { InstagramBlock } from './InstagramBlock'
 
+/**
+ * The footer opens on Instagram — image-led, so the page ends the way it ran
+ * — then steps down through the link columns to the wordmark and the bottom
+ * bar. Two hairlines only: the page should close quietly, not in boxes.
+ */
 export function Footer() {
   const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
 
   return (
     <footer className="bg-bone text-ink">
-      <Container className="pt-20 pb-10 md:pt-24">
-        {/* Top — links + connect */}
-        <div className="grid grid-cols-2 gap-x-8 gap-y-12 md:grid-cols-12">
+      <Container className="pt-16 pb-10 md:pt-20">
+        <InstagramBlock />
+
+        {/* Links */}
+        <div className="mt-16 grid grid-cols-2 gap-x-8 gap-y-12 border-t border-line pt-14 md:grid-cols-12 md:mt-20">
           <div className="md:col-span-3">
             <h3 className="label-sm mb-6 text-ash">The Collection</h3>
             <ul className="space-y-3">
@@ -28,9 +36,9 @@ export function Footer() {
             </ul>
           </div>
 
-          <div className="md:col-span-3 md:col-start-10">
+          <div className="md:col-span-3 md:col-start-6">
             <h3 className="label-sm mb-6 text-ash">Connect</h3>
-            <ul className="mb-8 space-y-3">
+            <ul className="space-y-3">
               {socials.map((s) => (
                 <li key={s.label}>
                   <a
@@ -44,7 +52,11 @@ export function Footer() {
                 </li>
               ))}
             </ul>
-            <p className="text-sm leading-relaxed text-ash">
+          </div>
+
+          <div className="md:col-span-3 md:col-start-10">
+            <h3 className="label-sm mb-6 text-ash">Studio</h3>
+            <p className="text-sm leading-relaxed text-fog">
               London
               <br />
               United Kingdom
@@ -52,13 +64,13 @@ export function Footer() {
           </div>
         </div>
 
-        {/* Oversized wordmark */}
-        <div className="mt-24 flex justify-center border-t border-line pt-14">
+        {/* Wordmark */}
+        <div className="mt-20 flex justify-center md:mt-24">
           <Logo variant="stacked" />
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-14 flex flex-col-reverse items-start justify-between gap-8 border-t border-line pt-8 md:flex-row md:items-center">
+        <div className="mt-16 flex flex-col-reverse items-start justify-between gap-8 border-t border-line pt-8 md:flex-row md:items-center md:mt-20">
           <span className="label-sm text-ash">
             © {new Date().getFullYear()} The Project London
           </span>
