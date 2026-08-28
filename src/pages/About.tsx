@@ -10,7 +10,7 @@ export default function About() {
     <div className="bg-paper">
       <PageHeader
         eyebrow="About Us"
-        title={'Made to make\nan *entrance*.'}
+        title={'Made to make\nan entrance.'}
         description="The Project is a London-born womenswear brand, creating timeless pieces designed to make an entrance."
         crumbs={[{ label: 'Home', to: '/' }, { label: 'About' }]}
       />
@@ -36,7 +36,7 @@ export default function About() {
           </Reveal>
           <h2 className="font-serif text-[clamp(1.75rem,3.75vw,3rem)] font-medium leading-[1.28] text-ink">
             <TextReveal
-              text={'Pretty, effortless and designed\nto make you feel your *best*.'}
+              text={'Pretty, effortless and designed\nto make you feel your best.'}
               stagger={0.06}
             />
           </h2>
@@ -53,7 +53,7 @@ export default function About() {
       <Section spacing="lg" className="bg-ink text-bone">
         <Container className="text-center">
           <h2 className="text-display font-serif font-medium">
-            <TextReveal text={'The *Collection*'} />
+            <TextReveal text={'The Collection'} />
           </h2>
           <Reveal delay={0.15} className="mt-10">
             <ButtonLink to="/shop" variant="light" size="lg">

@@ -40,26 +40,10 @@ interface TextRevealProps {
   delay?: number
 }
 
-/** Render a line, italicising any `*emphasised*` segments in serif italic. */
-function renderLine(line: string) {
-  return line
-    .split(/(\*[^*]+\*)/g)
-    .filter(Boolean)
-    .map((part, i) =>
-      part.startsWith('*') && part.endsWith('*') ? (
-        <em key={i} className="italic">
-          {part.slice(1, -1)}
-        </em>
-      ) : (
-        <span key={i}>{part}</span>
-      ),
-    )
-}
-
 /**
  * Masked line reveal for editorial headings. Pass a string with `\n` to split
- * into lines; each line rises out from behind a clip mask. Wrap a word in
- * `*asterisks*` to render it as a serif italic accent.
+ * into lines; each line rises out from behind a clip mask. One weight, one
+ * style — the headings carry no emphasis markup.
  *
  * Parent-driven: the wrapper owns the in-view trigger and staggers its children
  * via variants — more reliable than per-line `whileInView` (which can fail to
@@ -84,7 +68,7 @@ export function TextReveal({ text, className, stagger = 0.09, delay = 0 }: TextR
               visible: { y: '0%', transition: { duration: 1, ease: EASE_OUT_EXPO } },
             }}
           >
-            {renderLine(line)}
+            {line}
           </motion.span>
         </span>
       ))}

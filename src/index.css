@@ -22,11 +22,18 @@
   --color-accent: #6b5d4a; /* extremely restrained warm bronze */
 
   /* — Type families —
-     Bodoni Moda (Didone serif) is the editorial voice, echoing the brand
-     wordmark. Archivo is the tracked grotesque for labels/nav. Inter for body. */
+     Optima is the feature face — every headline, product name and accent.
+     Archivo is the tracked grotesque for labels/nav. Inter for body.
+
+     Optima is a licensed Monotype face with no free webfont, so it is called
+     from the system: it ships with macOS and iOS, Candara and Gill Sans cover
+     Windows, and Marcellus (Google Fonts) catches the rest with the same
+     flared, humanist feel. Buying a web licence and self-hosting the woff2
+     would replace the whole chain with one @font-face. Kept on the `serif`
+     slot — the site's editorial voice — though Optima is a humanist sans. */
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-display: 'Archivo', ui-sans-serif, system-ui, sans-serif;
-  --font-serif: 'Instrument Serif', ui-serif, Georgia, serif;
+  --font-serif: Optima, 'Optima nova LT Pro', 'URW Classico', Candara, 'Gill Sans', 'Gill Sans MT', Marcellus, ui-sans-serif, sans-serif;
 
   /* — Editorial fluid type scale — restrained for a minimal, image-led feel — */
   --text-hero: clamp(2.5rem, 8vw, 6.5rem);
@@ -97,9 +104,10 @@
 }
 
 /*
-  Instrument Serif ships a single weight. This unlayered rule overrides any
-  Tailwind font-weight utility on serif elements so the browser never
-  synthesises a distorted faux-bold. (Unlayered rules beat layered utilities.)
+  The feature face is set at a single weight everywhere. This unlayered rule
+  overrides any Tailwind font-weight utility on those elements, so a headline
+  reads identically whether the visitor has real Optima or a fallback that
+  would otherwise be faux-bolded. (Unlayered rules beat layered utilities.)
 */
 .font-serif {
   font-weight: 400;
