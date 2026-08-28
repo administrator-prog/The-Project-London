@@ -51,6 +51,17 @@ export const PEARL_IMAGES = [
   shoot('The%20Pearl%20Dress', 'WHITEDRESS_844.jpg'),
 ]
 
+/**
+ * Showcase frames — a tighter, studio-lit cut of the two pieces used for the
+ * editorial run beneath the hero.
+ */
+export const SHOWCASE_IMAGES = {
+  pearlDark: shoot('Showcase', 'IMG_1034.jpg'),
+  florenceLight: shoot('Showcase', 'IMG_1096.jpg'),
+  pearlPortrait: shoot('Showcase', 'IMG_1097.jpg'),
+  florenceArch: shoot('Showcase', 'IMG_2457.jpg'),
+} as const
+
 export const FLORENCE_IMAGES = [
   shoot('The%20Florence%20Dress', 'BEIEGE%20PINK%20DRESS_057%20copy.jpg'),
   shoot('The%20Florence%20Dress', 'PINK%20DRESS%201_548%20copy.jpg'),
