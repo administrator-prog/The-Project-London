@@ -12,7 +12,7 @@ import { sized } from '@/data/images'
  */
 export function FirstCollection() {
   return (
-    <Section spacing="lg" className="bg-paper">
+    <Section spacing="lg" className="bg-paper pt-12 pb-24 md:pt-16 md:pb-32">
       <Container>
         <div className="text-center">
           <h2 className="font-serif text-[clamp(1.75rem,3vw,2.875rem)] leading-[1.15] text-ink">
@@ -22,14 +22,14 @@ export function FirstCollection() {
           <Reveal delay={0.12} className="mt-7">
             <Link
               to={firstCollection.cta.href}
-              className="inline-block border-b border-ink px-2 pb-2.5 label-lg text-ink transition-opacity duration-500 hover:opacity-60"
+              className="inline-block border-b border-ink pb-2.5 label-lg text-ink transition-opacity duration-500 hover:opacity-60"
             >
               {firstCollection.cta.label}
             </Link>
           </Reveal>
         </div>
 
-        <div className="mt-16 grid grid-cols-2 gap-4 md:mt-24 md:grid-cols-4 md:gap-6">
+        <div className="mt-10 grid grid-cols-2 gap-4 md:mt-14 md:grid-cols-4 md:gap-6">
           {firstCollection.frames.map((frame, i) => (
             <Reveal key={frame.image} delay={(i % 4) * 0.08}>
               <Link

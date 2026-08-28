@@ -18,9 +18,9 @@ export function Invitation() {
   }
 
   return (
-    <section className="flex min-h-[92svh] items-center bg-bone py-28 text-ink">
+    <section className="flex items-center bg-bone py-20 text-ink md:py-24">
       <Container className="text-center">
-        <Reveal className="mb-8">
+        <Reveal className="mb-6">
           <span className="label text-ash">{invitation.eyebrow}</span>
         </Reveal>
 
@@ -29,13 +29,13 @@ export function Invitation() {
         </h2>
 
         <Reveal delay={0.15}>
-          <p className="mx-auto mt-8 max-w-md text-[0.95rem] leading-relaxed text-fog">
+          <p className="mx-auto mt-6 max-w-md text-[0.95rem] leading-relaxed text-fog">
             {invitation.body}
           </p>
         </Reveal>
 
         <Reveal delay={0.22}>
-          <div className="relative mx-auto mt-12 h-14 max-w-md">
+          <div className="relative mx-auto mt-9 h-14 max-w-md">
             <AnimatePresence mode="wait">
               {!submitted ? (
                 <motion.form
@@ -80,7 +80,7 @@ export function Invitation() {
         </Reveal>
 
         <Reveal delay={0.3}>
-          <p className="mt-6 text-xs text-ash">
+          <p className="mt-5 text-xs text-ash">
             By subscribing you agree to our Privacy Policy. Unsubscribe anytime.
           </p>
         </Reveal>
