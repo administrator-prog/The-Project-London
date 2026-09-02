@@ -19,9 +19,11 @@ export default function About() {
       />
 
       {/* Full-bleed film — 1920x1080, so it fills the frame the still held.
-          No poster: any still here is a different photograph, and it would
-          flash before the film took over. The warm sand ground carries the
-          frame instead, as it does for every image on the site.
+
+          The poster is the film's own first frame (60KB, shipped with the
+          site), not another photograph: it paints immediately and the film
+          starts from exactly that image, so there is no flash of something
+          else while 10MB arrives over the wire.
 
           Reduced motion gets the same film with controls rather than a
           substitute image — the choice to play it moves to the visitor. */}
@@ -30,6 +32,7 @@ export default function About() {
           <div className="relative aspect-[16/9] overflow-hidden bg-sand">
             <video
               src={MEDIA.aboutFilm}
+              poster="/about-poster.jpg"
               autoPlay={!reducedMotion}
               controls={reducedMotion}
               muted
