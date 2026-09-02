@@ -31,5 +31,5 @@ export const firstCollection = {
 
 export const invitation = {
   line: 'Join The Project',
-  body: 'We write only when it matters to be the first to discover new collections, exclusive updates, and more.',
+  body: 'Be the first to discover new collections, exclusive updates and more.',
 }

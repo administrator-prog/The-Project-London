@@ -19,31 +19,26 @@ export default function About() {
       />
 
       {/* Full-bleed film — 1920x1080, so it fills the frame the still held.
-          Muted and looping, with the campaign frame as the poster so the
-          band is never empty while 10MB loads. Anyone asking for reduced
-          motion keeps that still instead. */}
+          No poster: any still here is a different photograph, and it would
+          flash before the film took over. The warm sand ground carries the
+          frame instead, as it does for every image on the site.
+
+          Reduced motion gets the same film with controls rather than a
+          substitute image — the choice to play it moves to the visitor. */}
       <Container className="mb-24 md:mb-32">
         <Reveal>
           <div className="relative aspect-[16/9] overflow-hidden bg-sand">
-            {reducedMotion ? (
-              <img
-                src={MEDIA.campaignFeature}
-                alt="The Project London"
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <video
-                src={MEDIA.aboutFilm}
-                poster={MEDIA.campaignFeature}
-                autoPlay
-                muted
-                loop
-                playsInline
-                preload="metadata"
-                aria-label="The Project London"
-                className="h-full w-full object-cover"
-              />
-            )}
+            <video
+              src={MEDIA.aboutFilm}
+              autoPlay={!reducedMotion}
+              controls={reducedMotion}
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              aria-label="The Project London"
+              className="h-full w-full object-cover"
+            />
           </div>
         </Reveal>
       </Container>
