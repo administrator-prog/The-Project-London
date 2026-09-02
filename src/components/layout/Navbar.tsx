@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { ShoppingBag } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Logo } from '@/components/ui/Logo'
 import { primaryNav, secondaryNav } from '@/data/navigation'
+import { useBag } from '@/lib/bag'
 import { MobileMenu } from './MobileMenu'
 
 interface NavbarProps {
@@ -16,6 +17,7 @@ interface NavbarProps {
 export function Navbar({ heroMode = false, scrolled = false }: NavbarProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const { pathname } = useLocation()
+  const { count } = useBag()
 
   // A route change means the panel has done its job.
   useEffect(() => setMenuOpen(false), [pathname])
@@ -24,10 +26,21 @@ export function Navbar({ heroMode = false, scrolled = false }: NavbarProps) {
   // an open menu always wants the solid, dark-on-light bar.
   const light = heroMode && !scrolled && !menuOpen
 
+  /*
+    Every item in the bar sits on one line. The links were inline text inside
+    their `li`, so they hung off that element's 16px strut while the bag —
+    a flex box sized by its 19px icon — sat on its own centre: `items-center`
+    then lined up the boxes, not the words. Laying each item out as a flex
+    box of the label's own height puts them all on the same line, with the
+    4px drop and hairline reserved so the active underline costs no shift.
+  */
+  const barItem = 'flex items-center border-b border-transparent pb-1'
+
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     cn(
-      'label whitespace-nowrap pb-1 transition-opacity duration-300 hover:opacity-60',
-      isActive ? 'border-b border-current' : 'border-b border-transparent',
+      barItem,
+      'label whitespace-nowrap transition-opacity duration-300 hover:opacity-60',
+      isActive && 'border-current',
     )
 
   return (
@@ -63,11 +76,11 @@ export function Navbar({ heroMode = false, scrolled = false }: NavbarProps) {
 
             <button
               onClick={() => setMenuOpen((o) => !o)}
-              className="group flex items-center gap-3 lg:hidden"
+              className={cn(barItem, 'group gap-3 lg:hidden')}
               aria-label={menuOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={menuOpen}
             >
-              <span className="relative block h-3.5 w-6">
+              <span className="relative -my-[0.09375rem] block h-3.5 w-6">
                 <span
                   className={cn(
                     'absolute left-0 h-px w-6 bg-current transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]',
@@ -107,13 +120,17 @@ export function Navbar({ heroMode = false, scrolled = false }: NavbarProps) {
               ))}
             </ul>
 
-            <button
-              aria-label="Shopping bag"
-              className="flex items-center gap-2 pb-1 transition-opacity hover:opacity-60"
+            {/* The count is set in brackets rather than a badge — a red dot
+                would be the only loud thing on the page. */}
+            <Link
+              to="/bag"
+              aria-label={count > 0 ? `Bag, ${count} items` : 'Bag'}
+              className={cn(barItem, 'gap-2 transition-opacity hover:opacity-60')}
             >
               <span className="label hidden xl:inline">Bag</span>
-              <ShoppingBag size={19} strokeWidth={1.25} />
-            </button>
+              <ShoppingBag size={19} strokeWidth={1.25} className="-my-1" />
+              {count > 0 && <span className="label-sm tabular-nums">({count})</span>}
+            </Link>
           </div>
         </nav>
       </div>

@@ -2,7 +2,7 @@ import { motion, useScroll, useTransform } from 'framer-motion'
 import { useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowDown, ArrowRight } from 'lucide-react'
-import { MEDIA } from '@/data/images'
+import { MEDIA, HOME_HERO_MOBILE } from '@/data/images'
 import { hero } from '@/data/home'
 import { EASE_OUT_EXPO } from '@/lib/motion'
 
@@ -20,11 +20,17 @@ export function Hero() {
     <section ref={ref} className="relative h-[100svh] min-h-[640px] w-full overflow-hidden bg-ink">
       {/* Image */}
       <motion.div style={{ y: imageY, scale }} className="absolute inset-0 will-change-transform">
-        <img
-          src={MEDIA.homeHero}
-          alt="The Project London — Volume 04"
-          className="h-full w-full object-cover"
-        />
+        {/* Two frames, one download: the browser picks by media query before
+            it fetches, so the phone never pulls the desktop still and there
+            is no swap on load. 767px is the pixel below Tailwind's `md`. */}
+        <picture className="block h-full w-full">
+          <source media="(max-width: 767px)" srcSet={HOME_HERO_MOBILE} />
+          <img
+            src={MEDIA.homeHero}
+            alt="The Project London — Volume 04"
+            className="h-full w-full object-cover"
+          />
+        </picture>
         <motion.div style={{ opacity: overlay }} className="absolute inset-0 bg-ink" />
         <div className="absolute inset-0 bg-gradient-to-t from-ink/35 via-transparent to-ink/10" />
       </motion.div>

@@ -8,8 +8,8 @@ export default function Shop() {
   return (
     <div className="bg-paper pb-24 md:pb-32">
       <PageHeader
-        eyebrow="The Collection"
         title={'Shop'}
+        size="sm"
         description="Two pieces, considered down to the smallest detail — from the silhouette to the finishing touches."
         crumbs={[{ label: 'Home', to: '/' }, { label: 'Shop' }]}
       />

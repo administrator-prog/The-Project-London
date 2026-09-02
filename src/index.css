@@ -48,6 +48,12 @@
   --text-headline--line-height: 1.12;
   --text-headline--letter-spacing: 0em;
 
+  /* The quiet title — the home page's collection heading, and any page header
+     that opens at that weight rather than shouting. Shared so the two stay in
+     step: change it here and both move together. */
+  --text-title: clamp(1.5rem, 2.4vw, 2.125rem);
+  --text-title--line-height: 1.15;
+
   /* — Motion — */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out-soft: cubic-bezier(0.65, 0.05, 0.36, 1);
@@ -162,6 +168,10 @@
     font-size: var(--text-headline);
     line-height: var(--text-headline--line-height);
     letter-spacing: var(--text-headline--letter-spacing);
+  }
+  .text-title {
+    font-size: var(--text-title);
+    line-height: var(--text-title--line-height);
   }
 
   /* Full-bleed gutter used across the site */

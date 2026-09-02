@@ -21,6 +21,9 @@ export const MEDIA = {
   dress2: `${CDN}/Dress%202.mp4`,
   dressFeature1: `${CDN}/1st%20Dress%20feature.jpg`,
   dressFeature2: `${CDN}/2nd%20Dress%20Feature.jpeg`,
+  /* The filename itself contains percent signs, so the escapes are doubled
+     at source. Correct as written — do not "fix" %25 back to %20. */
+  aboutFilm: `${CDN}/The%2520Project%2520video-2.mp4`,
 } as const
 
 /**
@@ -30,6 +33,14 @@ const SHOOT_CDN = 'https://estateonline.b-cdn.net/The%20Project%20London'
 
 /** Filenames are already percent-encoded — pass them through verbatim. */
 const shoot = (folder: string, file: string) => `${SHOOT_CDN}/${folder}/${file}`
+
+/**
+ * The hero on phones. A portrait frame from the Florence shoot stands up to a
+ * tall viewport where the landscape campaign still has to be cropped hard to
+ * the middle. Desktop keeps `MEDIA.homeHero`; only one of the two is ever
+ * downloaded — see the `<picture>` in Hero.
+ */
+export const HOME_HERO_MOBILE = shoot('The%20Florence%20Dress', 'PINK%20DRESS%201_404%20copy.jpg')
 
 /**
  * Bunny Optimizer parameters. Currently a no-op — the Optimizer add-on is not
@@ -65,15 +76,10 @@ export const SHOWCASE_IMAGES = {
 export const FLORENCE_IMAGES = [
   shoot('The%20Florence%20Dress', 'BEIEGE%20PINK%20DRESS_057%20copy.jpg'),
   shoot('The%20Florence%20Dress', 'PINK%20DRESS%201_548%20copy.jpg'),
-  shoot('The%20Florence%20Dress', 'PINK%20DRESS%201_184%20copy.jpg'),
   shoot('The%20Florence%20Dress', 'PINK%20DRESS%201_263%20copy.jpg'),
   shoot('The%20Florence%20Dress', 'BEIEGE%20PINK%20DRESS_168%20copy.jpg'),
   shoot('The%20Florence%20Dress', 'BEIEGE%20PINK%20DRESS_159%20copy.jpg'),
-  shoot('The%20Florence%20Dress', 'PINK%20DRESS%201_256%20copy.jpg'),
   shoot('The%20Florence%20Dress', 'PINK%20DRESS%201_319%20copy.jpg'),
-  shoot('The%20Florence%20Dress', 'PINK%20DRESS%201_404%20copy.jpg'),
-  shoot('The%20Florence%20Dress', 'PINK%20DRESS%201_371%20copy.jpg'),
   shoot('The%20Florence%20Dress', 'PINK%20DRESS%201_297%20copy.jpg'),
   shoot('The%20Florence%20Dress', 'PINK%20DRESS%201_314%20copy.jpg'),
-  shoot('The%20Florence%20Dress', 'PINK%20DRESS%201_219%20copy.jpg'),
 ]

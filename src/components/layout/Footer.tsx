@@ -1,55 +1,54 @@
 import { Link } from 'react-router-dom'
-import { footerLinks, socials } from '@/data/navigation'
+import { footerColumns } from '@/data/navigation'
 import { Container } from '@/components/ui/Container'
 
 /**
- * The page closes on a single quiet band: one hairline, the links in two
- * short rows, the studio opposite, the line of copyright beneath.
+ * The page closes on four short columns — a tracked heading over a stack of
+ * links — and a bottom rule carrying the studio and the line of copyright.
  *
- * Two pieces and three links do not need columns, headings, a wordmark or a
- * back-to-top control — the site is short enough to scroll. Everything here
- * is text on the same hairline the rest of the site uses.
+ * The columns keep every link on its own line at every width, so nothing
+ * wraps into the row beside it. No wordmark, no back-to-top: the site is
+ * short enough to scroll, and the hairlines are the ones used throughout.
  */
 export function Footer() {
   return (
     <footer className="bg-bone text-ink">
       <Container className="border-t border-line py-14 md:py-16">
-        <div className="flex flex-col gap-9 md:flex-row md:items-start md:justify-between md:gap-16">
-          <nav className="flex flex-col gap-3.5" aria-label="Footer">
-            <ul className="flex flex-wrap gap-x-7 gap-y-3.5">
-              {footerLinks.map((link) => (
-                <li key={link.label}>
-                  <Link to={link.href} className={linkClass}>
-                    <span className="link-underline">{link.label}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+        <nav
+          aria-label="Footer"
+          className="grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-4"
+        >
+          {footerColumns.map((column) => (
+            <div key={column.heading}>
+              <h2 className="label-sm text-ash">{column.heading}</h2>
+              <ul className="mt-5 flex flex-col gap-3">
+                {column.links.map((link) => (
+                  <li key={link.label}>
+                    {!link.href ? (
+                      <span className={`${linkClass} cursor-default`}>{link.label}</span>
+                    ) : link.external ? (
+                      <a href={link.href} target="_blank" rel="noreferrer" className={linkClass}>
+                        <span className="link-underline">{link.label}</span>
+                      </a>
+                    ) : (
+                      <Link to={link.href} className={linkClass}>
+                        <span className="link-underline">{link.label}</span>
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </nav>
 
-            <ul className="flex flex-wrap gap-x-7 gap-y-3.5">
-              {socials.map((s) => (
-                <li key={s.label}>
-                  <a href={s.href} target="_blank" rel="noreferrer" className={linkClass}>
-                    <span className="link-underline">{s.label}</span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          <p className="text-sm leading-relaxed text-fog md:text-right">
-            London
-            <br />
-            United Kingdom
-          </p>
+        <div className="mt-14 flex flex-col gap-3 border-t border-line pt-7 label-sm text-ash sm:flex-row sm:items-center sm:justify-between md:mt-16">
+          <span>© {new Date().getFullYear()} The Project London</span>
+          <span>London, United Kingdom</span>
         </div>
-
-        <span className="mt-12 block label-sm text-ash md:mt-14">
-          © {new Date().getFullYear()} The Project London
-        </span>
       </Container>
     </footer>
   )
 }
 
-const linkClass = 'text-sm text-fog transition-colors duration-300 hover:text-ink'
+const linkClass = 'inline-block text-sm text-fog transition-colors duration-300 hover:text-ink'

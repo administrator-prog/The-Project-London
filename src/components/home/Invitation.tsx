@@ -18,18 +18,14 @@ export function Invitation() {
   }
 
   return (
-    <section className="flex items-center bg-bone py-20 text-ink md:py-24">
+    <section className="flex items-center bg-bone py-16 text-ink md:py-20">
       <Container className="text-center">
-        <Reveal className="mb-6">
-          <span className="label text-ash">{invitation.eyebrow}</span>
-        </Reveal>
-
-        <h2 className="mx-auto max-w-[16ch] text-display font-serif font-medium text-ink">
+        <h2 className="mx-auto max-w-[18ch] font-serif text-[1.75rem] font-medium leading-[1.15] tracking-tight text-ink md:text-[2rem]">
           <TextReveal text={invitation.line} />
         </h2>
 
         <Reveal delay={0.15}>
-          <p className="mx-auto mt-6 max-w-md text-[0.95rem] leading-relaxed text-fog">
+          <p className="mx-auto mt-5 max-w-md text-[0.9rem] leading-relaxed text-fog">
             {invitation.body}
           </p>
         </Reveal>

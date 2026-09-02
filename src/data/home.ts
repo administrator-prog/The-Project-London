@@ -30,7 +30,6 @@ export const firstCollection = {
 }
 
 export const invitation = {
-  eyebrow: 'The Project',
-  line: 'The next chapter.',
-  body: 'Private previews and early access. We write only when it matters.',
+  line: 'Join The Project',
+  body: 'We write only when it matters to be the first to discover new collections, exclusive updates, and more.',
 }

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { cn } from '@/lib/utils'
 import { Container } from './Container'
 import { Reveal, TextReveal } from './Reveal'
 
@@ -12,9 +13,11 @@ interface PageHeaderProps {
   eyebrow?: string
   description?: string
   crumbs?: Crumb[]
+  /** `sm` opens the page on the shared title scale rather than the display one. */
+  size?: 'default' | 'sm'
 }
 
-export function PageHeader({ title, eyebrow, description, crumbs }: PageHeaderProps) {
+export function PageHeader({ title, eyebrow, description, crumbs, size = 'default' }: PageHeaderProps) {
   return (
     <Container className="pt-6 pb-10 md:pt-10 md:pb-14">
       {crumbs && (
@@ -42,7 +45,12 @@ export function PageHeader({ title, eyebrow, description, crumbs }: PageHeaderPr
         </Reveal>
       )}
 
-      <h1 className="text-display font-serif font-semibold text-ink">
+      <h1
+        className={cn(
+          'font-serif font-semibold text-ink',
+          size === 'sm' ? 'text-title' : 'text-display',
+        )}
+      >
         <TextReveal text={title} />
       </h1>
 

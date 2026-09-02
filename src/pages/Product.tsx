@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, Link, Navigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Minus, Truck, RotateCcw } from 'lucide-react'
@@ -11,6 +11,7 @@ import { SectionHeading } from '@/components/ui/SectionHeading'
 import { Button } from '@/components/ui/Button'
 import { ProductCard } from '@/components/product/ProductCard'
 import { EASE_OUT_EXPO } from '@/lib/motion'
+import { useBag } from '@/lib/bag'
 
 export default function Product() {
   const { id } = useParams()
@@ -19,6 +20,16 @@ export default function Product() {
   const [activeImage, setActiveImage] = useState(0)
   const [activeSize, setActiveSize] = useState<string | null>(null)
   const [openAccordion, setOpenAccordion] = useState<string | null>('Size & Fit')
+  const [justAdded, setJustAdded] = useState(false)
+  const { add } = useBag()
+
+  // The confirmation is a moment, not a state — it clears itself, and clears
+  // on unmount so a quick navigation cannot set state on a gone component.
+  useEffect(() => {
+    if (!justAdded) return
+    const t = setTimeout(() => setJustAdded(false), 2400)
+    return () => clearTimeout(t)
+  }, [justAdded])
 
   if (!product) return <Navigate to="/shop" replace />
 
@@ -97,13 +108,12 @@ export default function Product() {
 
           {/* Info */}
           <div className="lg:sticky lg:top-32 lg:h-fit lg:py-4">
-            <span className="label-sm text-ash">{product.category}</span>
-            <h1 className="mt-3 font-serif text-3xl font-medium tracking-tight text-ink md:text-[2.75rem] md:leading-[1.05]">
+            <h1 className="font-serif text-xl font-medium leading-tight tracking-tight text-ink md:text-[1.375rem]">
               {product.name}
             </h1>
-            <span className="mt-4 block text-xl text-ink">{formatPrice(product.price)}</span>
+            <span className="mt-2 block text-sm text-fog">{formatPrice(product.price)}</span>
 
-            <p className="mt-7 max-w-md text-[0.95rem] leading-relaxed text-fog">
+            <p className="mt-6 max-w-md text-[0.95rem] leading-relaxed text-fog">
               {product.description}
             </p>
 
@@ -143,10 +153,38 @@ export default function Product() {
               variant="solid"
               size="lg"
               className="mt-8 h-14 w-full"
-              disabled={product.soldOut}
+              disabled={product.soldOut || !activeSize}
+              onClick={() => {
+                if (!activeSize) return
+                add(product.id, activeSize)
+                setJustAdded(true)
+              }}
             >
-              {product.soldOut ? 'Sold Out' : activeSize ? 'Add to Bag' : 'Select a Size'}
+              {product.soldOut
+                ? 'Sold Out'
+                : !activeSize
+                  ? 'Select a Size'
+                  : justAdded
+                    ? 'Added to Bag'
+                    : 'Add to Bag'}
             </Button>
+
+            <AnimatePresence>
+              {justAdded && (
+                <motion.p
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.4, ease: EASE_OUT_EXPO }}
+                  className="mt-4 text-center text-sm text-fog"
+                >
+                  Added in size {activeSize}.{' '}
+                  <Link to="/bag" className="text-ink">
+                    <span className="link-underline">View bag</span>
+                  </Link>
+                </motion.p>
+              )}
+            </AnimatePresence>
 
             {/* Assurances */}
             <div className="mt-6 grid grid-cols-2 gap-4 border-y border-line py-5">
@@ -203,7 +241,8 @@ export default function Product() {
             <SectionHeading
               eyebrow="The Collection"
               title={'The Other Piece'}
-              className="mb-14"
+              size="sm"
+              className="mb-10"
             />
             <div className="mx-auto max-w-sm sm:max-w-md">
               <ProductCard product={other} />

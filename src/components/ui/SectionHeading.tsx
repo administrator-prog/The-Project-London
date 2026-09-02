@@ -10,6 +10,8 @@ interface SectionHeadingProps {
   description?: string
   link?: { label: string; to: string }
   align?: 'left' | 'center'
+  /** `sm` steps the whole block down for a quieter, secondary section. */
+  size?: 'default' | 'sm'
   className?: string
 }
 
@@ -23,8 +25,10 @@ export function SectionHeading({
   description,
   link,
   align = 'left',
+  size = 'default',
   className,
 }: SectionHeadingProps) {
+  const small = size === 'sm'
   return (
     <div
       className={cn(
@@ -35,11 +39,16 @@ export function SectionHeading({
     >
       <div className={cn('max-w-2xl', align === 'center' && 'mx-auto')}>
         {eyebrow && (
-          <Reveal as="div" className="mb-5">
-            <span className="label text-ash">{eyebrow}</span>
+          <Reveal as="div" className={small ? 'mb-3' : 'mb-5'}>
+            <span className={cn(small ? 'label-sm' : 'label', 'text-ash')}>{eyebrow}</span>
           </Reveal>
         )}
-        <h2 className="text-headline font-serif font-semibold text-ink">
+        <h2
+          className={cn(
+            'font-serif font-semibold text-ink',
+            small ? 'text-xl md:text-2xl' : 'text-headline',
+          )}
+        >
           <TextReveal text={title} />
         </h2>
         {description && (

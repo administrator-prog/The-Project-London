@@ -21,3 +21,16 @@ export interface NavLink {
   label: string
   href: string
 }
+
+export interface FooterColumn {
+  heading: string
+  /** A link with no `href` renders inert — that page is not written yet. */
+  links: { label: string; href?: string; external?: boolean }[]
+}
+
+/** One line in the bag: a piece, in a size, at a quantity. */
+export interface BagLine {
+  productId: string
+  size: string
+  quantity: number
+}

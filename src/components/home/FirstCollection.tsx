@@ -20,7 +20,7 @@ export function FirstCollection() {
     <Section spacing="sm" className="bg-paper">
       <Container>
         <div className="text-center">
-          <h2 className="font-serif text-[clamp(1.5rem,2.4vw,2.125rem)] leading-[1.15] text-ink">
+          <h2 className="text-title font-serif text-ink">
             <TextReveal text={firstCollection.title} />
           </h2>
 
