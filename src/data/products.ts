@@ -4,7 +4,7 @@ import { PEARL_IMAGES, FLORENCE_IMAGES } from './images'
 const SIZES = ['XS', 'S', 'M', 'L']
 
 const SHIPPING =
-  'Complimentary UK delivery. Orders are dispatched within 1–2 working days.\n\nWe hope you love your purchase, but if you decide to return your order, you can do so within 14 days of delivery for a full refund. Items must be unworn, in their original condition, with all original tags attached and returned in their original packaging.'
+  'Complimentary UK delivery by Royal Mail, or DPD Next Day for £7.95. International delivery is a flat £25. Orders are dispatched within 1–2 working days.\n\nIf you decide to return your order, you can do so within 14 days of delivery for a full refund. Items must be unworn, in their original condition, with all original tags attached and returned in their original packaging. Return postage is the responsibility of the customer.'
 
 export const products: Product[] = [
   {

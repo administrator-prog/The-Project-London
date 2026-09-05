@@ -6,6 +6,9 @@ import Product from '@/pages/Product'
 import About from '@/pages/About'
 import Bag from '@/pages/Bag'
 import OrderConfirmed from '@/pages/OrderConfirmed'
+import Returns from '@/pages/Returns'
+import Shipping from '@/pages/Shipping'
+import FAQ from '@/pages/FAQ'
 import NotFound from '@/pages/NotFound'
 
 export default function App() {
@@ -18,6 +21,9 @@ export default function App() {
         <Route path="about" element={<About />} />
         <Route path="bag" element={<Bag />} />
         <Route path="order/confirmed" element={<OrderConfirmed />} />
+        <Route path="returns" element={<Returns />} />
+        <Route path="shipping" element={<Shipping />} />
+        <Route path="faq" element={<FAQ />} />
         {/* Legacy paths from the larger store structure. */}
         <Route path="collections/*" element={<Navigate to="/shop" replace />} />
         <Route path="editorial/*" element={<Navigate to="/shop" replace />} />

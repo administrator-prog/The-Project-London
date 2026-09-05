@@ -18,7 +18,7 @@ export const SHIPPING: Record<
   uk: {
     label: 'Complimentary',
     pounds: 0,
-    note: 'Next day delivery is available at checkout for £7.95.',
+    note: 'DPD Next Day is available at checkout for £7.95.',
   },
   international: {
     label: '£25.00',

@@ -25,8 +25,8 @@ export const socials: NavLink[] = [
  * short columns read as one tidy band where a wrapping row of mixed links
  * did not.
  *
- * Customer care carries labels without hrefs — those pages are not written
- * yet, so the footer renders them inert rather than pointing at dead routes.
+ * A link with no href renders inert, which is how Customer Care sat until
+ * those three pages were written.
  */
 export const footerColumns: FooterColumn[] = [
   {
@@ -42,7 +42,11 @@ export const footerColumns: FooterColumn[] = [
   },
   {
     heading: 'Customer Care',
-    links: [{ label: 'FAQ' }, { label: 'Shipping' }, { label: 'Returns & Exchanges' }],
+    links: [
+      { label: 'FAQ', href: '/faq' },
+      { label: 'Shipping', href: '/shipping' },
+      { label: 'Returns & Exchanges', href: '/returns' },
+    ],
   },
   {
     heading: 'Social',
