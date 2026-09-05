@@ -118,8 +118,24 @@ export default async function handler(request: Request) {
 
     return new Response('OK', { status: 200 })
   } catch (error) {
-    // Release the claim so Stripe's retry is allowed to try again, rather than
-    // hitting the "already processed" branch above and skipping the order.
+    const message = error instanceof Error ? error.message : String(error)
+
+    /*
+     * An event naming a PaymentIntent we hold no order for cannot be fixed by
+     * retrying, so it is acknowledged rather than failed. In practice this is
+     * the dashboard's "Send test event" button, whose ids are fabricated and
+     * exist nowhere in the account. Failing it would show a red delivery for a
+     * correctly configured endpoint and then retry the dead event for three
+     * days. The claim is deliberately kept, so the retries stop.
+     */
+    if (/unknown_intent|no such payment_intent|resource_missing/i.test(message)) {
+      console.warn('Webhook for an unrecognised PaymentIntent — acknowledged, not retried', message)
+      return new Response('No matching order', { status: 200 })
+    }
+
+    // A real failure. Release the claim so Stripe's retry is allowed to try
+    // again, rather than hitting the "already processed" branch and skipping
+    // the order entirely.
     console.error('Webhook handling failed', error)
     await supabase.from('stripe_events').delete().eq('id', event.id)
     return new Response('Handler error', { status: 500 })
