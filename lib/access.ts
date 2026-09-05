@@ -97,6 +97,19 @@ export function requestHost(request: Request) {
 }
 
 /**
+ * The absolute origin this request arrived on — `https://theprojectlondon.com`.
+ *
+ * Stripe will not accept a relative return URL, so unlike the middleware's
+ * redirects this has to be spelled out in full. Derived from the request
+ * rather than configured, so it stays correct on every preview deployment.
+ */
+export function requestOrigin(request: Request) {
+  const proto =
+    request.headers.get('x-forwarded-proto') ?? new URL(request.url).protocol.replace(':', '')
+  return `${proto}://${requestHost(request)}`
+}
+
+/**
  * True when the request came from a page on this same deployment.
  *
  * Browsers always send `Origin` on a cross-origin-capable POST, so a missing

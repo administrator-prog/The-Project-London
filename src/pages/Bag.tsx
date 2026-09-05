@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Minus, Plus } from 'lucide-react'
@@ -8,7 +9,9 @@ import { Reveal, TextReveal } from '@/components/ui/Reveal'
 import { sized } from '@/data/images'
 import { useBag, MAX_PER_LINE } from '@/lib/bag'
 import type { BagItem } from '@/lib/bag'
-import { formatPrice } from '@/lib/utils'
+import { formatPrice, cn } from '@/lib/utils'
+import { SHIPPING, startCheckout } from '@/lib/checkout'
+import type { ShippingZone } from '@/lib/checkout'
 import { EASE_OUT_EXPO } from '@/lib/motion'
 
 /**
@@ -21,6 +24,33 @@ import { EASE_OUT_EXPO } from '@/lib/motion'
  */
 export default function Bag() {
   const { items, count, subtotal, setQuantity, remove, clear } = useBag()
+
+  const [zone, setZone] = useState<ShippingZone>('uk')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const shipping = SHIPPING[zone]
+
+  /**
+   * Hands the bag to the server and follows wherever it points. `busy` is
+   * never cleared on success — the browser is on its way to Stripe, and a
+   * button that springs back to life mid-navigation invites a second click
+   * and a second order.
+   */
+  async function checkout() {
+    setBusy(true)
+    setError(null)
+
+    const result = await startCheckout(items, zone)
+
+    if (result.ok) {
+      window.location.href = result.url
+      return
+    }
+
+    setError(result.message)
+    setBusy(false)
+  }
 
   if (items.length === 0) return <EmptyBag />
 
@@ -60,26 +90,39 @@ export default function Bag() {
             <div className="bg-bone p-7 md:p-8">
               <h2 className="label-sm text-ash">Summary</h2>
 
+              <ZonePicker zone={zone} onChange={setZone} disabled={busy} />
+
               <dl className="mt-6 space-y-3.5">
                 <SummaryRow label="Subtotal" value={formatPrice(subtotal)} />
-                <SummaryRow label="Shipping" value="Complimentary" />
-                <SummaryRow label="Taxes" value="At checkout" muted />
+                <SummaryRow label="Shipping" value={shipping.label} />
               </dl>
 
               <div className="mt-5 flex items-baseline justify-between gap-4 border-t border-line pt-5">
                 <span className="label-sm text-ink">Total</span>
-                <span className="font-serif text-lg text-ink">{formatPrice(subtotal)}</span>
+                <span className="font-serif text-lg text-ink">
+                  {formatPrice(subtotal + shipping.pounds)}
+                </span>
               </div>
 
-              {/* No payment provider is connected yet — this is where the
-                  checkout session would be opened. */}
-              <Button variant="solid" size="lg" className="mt-7 h-14 w-full">
-                Checkout
+              <Button
+                variant="solid"
+                size="lg"
+                className="mt-7 h-14 w-full"
+                onClick={checkout}
+                disabled={busy}
+              >
+                {busy ? 'Taking you to checkout' : 'Checkout'}
               </Button>
 
+              {error && (
+                <p role="alert" className="mt-4 text-xs leading-relaxed text-accent">
+                  {error}
+                </p>
+              )}
+
               <p className="mt-4 text-xs leading-relaxed text-ash">
-                Complimentary UK delivery and 14-day returns. Taxes and any duties
-                are calculated at checkout.
+                {shipping.note} Returns are accepted within 14 days, unworn and with
+                tags attached.
               </p>
             </div>
 
@@ -191,6 +234,48 @@ function Stepper({
         <Plus size={13} strokeWidth={1.5} />
       </button>
     </div>
+  )
+}
+
+/**
+ * Where it is going. Asked here rather than left to Stripe because Stripe
+ * shows every shipping option a session carries — without this, a London
+ * customer would be offered the £25 international rate beside the free one.
+ */
+function ZonePicker({
+  zone,
+  onChange,
+  disabled,
+}: {
+  zone: ShippingZone
+  onChange: (zone: ShippingZone) => void
+  disabled?: boolean
+}) {
+  const options: { value: ShippingZone; label: string }[] = [
+    { value: 'uk', label: 'United Kingdom' },
+    { value: 'international', label: 'Rest of World' },
+  ]
+
+  return (
+    <fieldset className="mt-6" disabled={disabled}>
+      <legend className="text-sm text-fog">Delivering to</legend>
+      <div className="mt-3 flex border border-line bg-paper">
+        {options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+            aria-pressed={zone === option.value}
+            className={cn(
+              'flex-1 px-2 py-2.5 label-sm transition-colors duration-300 disabled:opacity-40',
+              zone === option.value ? 'bg-ink text-bone' : 'text-ash hover:text-ink',
+            )}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </fieldset>
   )
 }
 

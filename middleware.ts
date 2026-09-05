@@ -20,11 +20,17 @@ const PUBLIC_PATHS = new Set([
   '/api/verify-access',
   // The gate page's interest-list form posts here, so it sits outside the wall.
   '/api/subscribe',
+  // Stripe posts here from its own servers with no cookie of ours. Gating it
+  // would answer every delivery with a 307 to /access, and no order would ever
+  // be marked paid. Its own signature check is the authentication.
+  '/api/stripe-webhook',
   '/favicon.svg',
 ])
 
 export const config = {
-  matcher: ['/((?!api/verify-access|api/subscribe|access\\.html|favicon\\.svg).*)'],
+  matcher: [
+    '/((?!api/verify-access|api/subscribe|api/stripe-webhook|access\\.html|favicon\\.svg).*)',
+  ],
 }
 
 /**
