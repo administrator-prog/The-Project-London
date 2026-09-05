@@ -28,9 +28,9 @@ with placed as (
 )
 select
   (o ->> 'subtotalPence')::int = 100000 as subtotal_is_correct,
-  jsonb_array_length(o -> 'items') = 2     as both_lines_priced,
-  o ->> 'reference'                        as reference,
-  o -> 'items'                             as items
+  jsonb_array_length(o -> 'items') = 2  as both_lines_priced,
+  (o ->> 'clientToken') is not null     as token_issued,
+  o ->> 'reference'                     as reference
 from placed;
 
 \echo ''
@@ -79,37 +79,85 @@ end
 $$;
 
 \echo ''
-\echo '--- 5. Payment: stock moves exactly once -------------------------------'
+\echo '--- 5. The shipping rate is priced by the server, not the client -------'
 do $$
 declare
-  v_order_id  uuid;
-  v_before    integer;
-  v_after     integer;
-  v_second    integer;
-  v_result    jsonb;
+  v_token uuid;
+  v_priced jsonb;
+begin
+  select (public.place_order(
+    '[{"productId":"the-pearl","size":"S","quantity":1}]'::jsonb, 'uk'
+  ) ->> 'clientToken')::uuid into v_token;
+
+  -- The free UK rate.
+  v_priced := public.prepare_payment(v_token, 'uk-standard');
+  if (v_priced ->> 'totalPence')::int <> 32500 then
+    raise exception 'FAIL: free UK delivery did not total 32500, got %', v_priced ->> 'totalPence';
+  end if;
+  raise notice 'uk-standard  -> total %', v_priced ->> 'totalPence';
+
+  -- Next day adds exactly 795, from the table and not from the caller.
+  v_priced := public.prepare_payment(v_token, 'uk-next-day');
+  if (v_priced ->> 'totalPence')::int <> 33295 then
+    raise exception 'FAIL: next day did not total 33295, got %', v_priced ->> 'totalPence';
+  end if;
+  raise notice 'uk-next-day  -> total %', v_priced ->> 'totalPence';
+
+  -- The important one: a UK order must not be able to buy the international
+  -- rate, nor an international order the free UK one.
+  begin
+    perform public.prepare_payment(v_token, 'international');
+    raise exception 'FAIL: a UK order was allowed to pay an international rate';
+  exception
+    when others then
+      if sqlerrm like 'FAIL:%' then raise; end if;
+      raise notice 'refused (rate from the wrong zone) -> %', sqlerrm;
+  end;
+
+  begin
+    perform public.prepare_payment(v_token, 'not-a-rate');
+    raise exception 'FAIL: an unknown rate was accepted';
+  exception
+    when others then
+      if sqlerrm like 'FAIL:%' then raise; end if;
+      raise notice 'refused (unknown rate) -> %', sqlerrm;
+  end;
+end
+$$;
+
+\echo ''
+\echo '--- 6. Payment: stock moves exactly once -------------------------------'
+do $$
+declare
+  v_token  uuid;
+  v_before integer;
+  v_after  integer;
+  v_second integer;
+  v_result jsonb;
 begin
   select (public.place_order(
     '[{"productId":"the-pearl","size":"M","quantity":3}]'::jsonb, 'uk', 'buyer@example.com'
-  ) ->> 'id')::uuid into v_order_id;
+  ) ->> 'clientToken')::uuid into v_token;
 
-  update public.orders set stripe_session_id = 'cs_test_lifecycle' where id = v_order_id;
+  perform public.prepare_payment(v_token, 'uk-standard', 'buyer@example.com');
+  perform public.attach_payment_intent(v_token, 'pi_test_lifecycle');
 
   select stock into v_before from public.product_variants
    where product_id = 'the-pearl' and size = 'M';
 
-  v_result := public.mark_order_paid(
-    p_session_id       => 'cs_test_lifecycle',
+  v_result := public.mark_order_paid_by_intent(
     p_payment_intent   => 'pi_test_lifecycle',
     p_email            => 'buyer@example.com',
     p_customer_name    => 'A Buyer',
-    p_shipping_method  => 'Complimentary UK Delivery',
-    p_shipping_pence   => 0,
     p_total_pence      => 97500,
     p_shipping_address => '{"line1":"1 Test Street","city":"London","postal_code":"E1 1AA","country":"GB"}'::jsonb
   );
 
   if (v_result ->> 'alreadyPaid')::boolean then
     raise exception 'FAIL: a first payment reported itself as already paid';
+  end if;
+  if (v_result -> 'order' ->> 'zone_mismatch')::boolean then
+    raise exception 'FAIL: a GB address on a UK order was flagged as a mismatch';
   end if;
 
   select stock into v_after from public.product_variants
@@ -121,7 +169,7 @@ begin
   raise notice 'stock committed: % -> %', v_before, v_after;
 
   -- Stripe redelivering the same event must change nothing.
-  v_result := public.mark_order_paid(p_session_id => 'cs_test_lifecycle');
+  v_result := public.mark_order_paid_by_intent(p_payment_intent => 'pi_test_lifecycle');
 
   if not (v_result ->> 'alreadyPaid')::boolean then
     raise exception 'FAIL: a replayed payment was treated as new';
@@ -135,33 +183,47 @@ begin
   end if;
   raise notice 'replay is a no-op: stock still %', v_second;
 
-  -- A late "expired" event must not unpick a paid order.
-  perform public.mark_order_closed('cs_test_lifecycle', 'cancelled');
-  if (select status from public.orders where id = v_order_id) <> 'paid' then
-    raise exception 'FAIL: a late expiry event cancelled a paid order';
+  -- A late failure event must not unpick a paid order.
+  perform public.mark_intent_closed('pi_test_lifecycle', 'failed');
+  if (select status from public.orders where stripe_payment_intent = 'pi_test_lifecycle') <> 'paid' then
+    raise exception 'FAIL: a late failure event cancelled a paid order';
   end if;
-  raise notice 'a late expiry event left the paid order alone';
+  raise notice 'a late failure event left the paid order alone';
+
+  -- And a paid order can no longer be re-priced.
+  begin
+    perform public.prepare_payment(v_token, 'uk-next-day');
+    raise exception 'FAIL: a paid order was re-priced';
+  exception
+    when others then
+      if sqlerrm like 'FAIL:%' then raise; end if;
+      raise notice 'refused (re-pricing a paid order) -> %', sqlerrm;
+  end;
 end
 $$;
 
 \echo ''
-\echo '--- 6. Overselling is survivable, not fatal ----------------------------'
+\echo '--- 7. Overselling is survivable, not fatal ----------------------------'
 do $$
 declare
-  v_order_id uuid;
-  v_result   jsonb;
+  v_token  uuid;
+  v_result jsonb;
 begin
   select (public.place_order(
     '[{"productId":"the-florence","size":"L","quantity":4}]'::jsonb, 'international'
-  ) ->> 'id')::uuid into v_order_id;
+  ) ->> 'clientToken')::uuid into v_token;
 
-  update public.orders set stripe_session_id = 'cs_test_shortfall' where id = v_order_id;
+  perform public.prepare_payment(v_token, 'international');
+  perform public.attach_payment_intent(v_token, 'pi_test_shortfall');
 
   -- The size sells out between checkout and payment.
   update public.product_variants set stock = 1
    where product_id = 'the-florence' and size = 'L';
 
-  v_result := public.mark_order_paid(p_session_id => 'cs_test_shortfall', p_total_pence => 142500);
+  v_result := public.mark_order_paid_by_intent(
+    p_payment_intent   => 'pi_test_shortfall',
+    p_shipping_address => '{"line1":"1 Rue","city":"Paris","postal_code":"75001","country":"FR"}'::jsonb
+  );
 
   if not ((v_result -> 'order' ->> 'stock_shortfall')::boolean) then
     raise exception 'FAIL: an oversold order was not flagged';
@@ -179,19 +241,57 @@ end
 $$;
 
 \echo ''
-\echo '--- 7. order_summary leaks nothing internal -----------------------------'
-select
-  not (public.order_summary('cs_test_lifecycle') ?| array[
-    'stripePaymentIntent', 'stripe_payment_intent', 'stripe_customer_id',
-    'stock_committed', 'id'
-  ]) as summary_is_curated,
-  public.order_summary('cs_test_lifecycle') ->> 'reference' as reference,
-  public.order_summary('cs_test_lifecycle') ->> 'status' as status;
+\echo '--- 8. A destination that does not match what was paid is flagged ------'
+do $$
+declare
+  v_token  uuid;
+  v_result jsonb;
+begin
+  -- Priced as UK, with its £0 delivery, but addressed to California.
+  select (public.place_order(
+    '[{"productId":"the-pearl","size":"XS","quantity":1}]'::jsonb, 'uk'
+  ) ->> 'clientToken')::uuid into v_token;
 
-select public.order_summary('cs_does_not_exist') is null as unknown_session_is_null;
+  perform public.prepare_payment(v_token, 'uk-standard');
+  perform public.attach_payment_intent(v_token, 'pi_test_zone');
+
+  v_result := public.mark_order_paid_by_intent(
+    p_payment_intent   => 'pi_test_zone',
+    p_shipping_address => '{"line1":"1 Market St","city":"San Francisco","postal_code":"94103","country":"US"}'::jsonb
+  );
+
+  if not ((v_result -> 'order' ->> 'zone_mismatch')::boolean) then
+    raise exception 'FAIL: a UK-priced order shipping to the US was not flagged';
+  end if;
+  if (v_result -> 'order' ->> 'status') <> 'paid' then
+    raise exception 'FAIL: a mismatched order was refused rather than flagged';
+  end if;
+
+  raise notice 'paid and flagged — the studio decides, the payment stands';
+end
+$$;
 
 \echo ''
-\echo '--- 8. RLS is on everywhere --------------------------------------------'
+\echo '--- 9. order_summary_by_intent leaks nothing internal -------------------'
+select
+  not (public.order_summary_by_intent('pi_test_lifecycle') ?| array[
+    'stripe_payment_intent', 'stripe_customer_id', 'client_token',
+    'stock_committed', 'zone_mismatch', 'id'
+  ]) as summary_is_curated,
+  public.order_summary_by_intent('pi_test_lifecycle') ->> 'reference' as reference,
+  public.order_summary_by_intent('pi_test_lifecycle') ->> 'status'    as status;
+
+select public.order_summary_by_intent('pi_nope') is null as unknown_intent_is_null;
+
+\echo ''
+\echo '--- 10. The Checkout Session era is gone -------------------------------'
+select count(*) = 0 as session_functions_dropped
+  from pg_proc
+ where pronamespace = 'public'::regnamespace
+   and proname in ('mark_order_paid', 'mark_order_closed', 'order_summary');
+
+\echo ''
+\echo '--- 11. RLS is on everywhere -------------------------------------------'
 select relname, relrowsecurity as rls_enabled, relforcerowsecurity as forced
   from pg_class
  where relnamespace = 'public'::regnamespace
@@ -199,7 +299,7 @@ select relname, relrowsecurity as rls_enabled, relforcerowsecurity as forced
  order by relname;
 
 \echo ''
-\echo '--- 9. anon and authenticated cannot call the money functions ----------'
+\echo '--- 12. anon and authenticated cannot call the money functions ---------'
 select
   p.proname,
   has_function_privilege('anon',          p.oid, 'execute') as anon_can_call,
@@ -207,7 +307,10 @@ select
   has_function_privilege('service_role',  p.oid, 'execute') as service_can_call
 from pg_proc p
 where p.pronamespace = 'public'::regnamespace
-  and p.proname in ('place_order','mark_order_paid','mark_order_closed','order_summary')
+  and p.proname in (
+    'place_order','prepare_payment','attach_payment_intent',
+    'mark_order_paid_by_intent','mark_intent_closed','order_summary_by_intent'
+  )
 order by p.proname;
 
 rollback;

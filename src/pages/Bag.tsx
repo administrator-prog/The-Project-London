@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Minus, Plus } from 'lucide-react'
 import { Container } from '@/components/ui/Container'
@@ -10,7 +10,7 @@ import { sized } from '@/data/images'
 import { useBag, MAX_PER_LINE } from '@/lib/bag'
 import type { BagItem } from '@/lib/bag'
 import { formatPrice, cn } from '@/lib/utils'
-import { SHIPPING, startCheckout } from '@/lib/checkout'
+import { SHIPPING } from '@/lib/checkout'
 import type { ShippingZone } from '@/lib/checkout'
 import { EASE_OUT_EXPO } from '@/lib/motion'
 
@@ -25,31 +25,18 @@ import { EASE_OUT_EXPO } from '@/lib/motion'
 export default function Bag() {
   const { items, count, subtotal, setQuantity, remove, clear } = useBag()
 
+  const navigate = useNavigate()
   const [zone, setZone] = useState<ShippingZone>('uk')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   const shipping = SHIPPING[zone]
 
   /**
-   * Hands the bag to the server and follows wherever it points. `busy` is
-   * never cleared on success — the browser is on its way to Stripe, and a
-   * button that springs back to life mid-navigation invites a second click
-   * and a second order.
+   * The zone travels in the URL rather than in router state, so a refresh on
+   * the checkout page does not lose it and land an international customer on
+   * UK rates.
    */
-  async function checkout() {
-    setBusy(true)
-    setError(null)
-
-    const result = await startCheckout(items, zone)
-
-    if (result.ok) {
-      window.location.href = result.url
-      return
-    }
-
-    setError(result.message)
-    setBusy(false)
+  function checkout() {
+    navigate(`/checkout?zone=${zone}`)
   }
 
   if (items.length === 0) return <EmptyBag />
@@ -90,7 +77,7 @@ export default function Bag() {
             <div className="bg-bone p-7 md:p-8">
               <h2 className="label-sm text-ash">Summary</h2>
 
-              <ZonePicker zone={zone} onChange={setZone} disabled={busy} />
+              <ZonePicker zone={zone} onChange={setZone} />
 
               <dl className="mt-6 space-y-3.5">
                 <SummaryRow label="Subtotal" value={formatPrice(subtotal)} />
@@ -104,21 +91,9 @@ export default function Bag() {
                 </span>
               </div>
 
-              <Button
-                variant="solid"
-                size="lg"
-                className="mt-7 h-14 w-full"
-                onClick={checkout}
-                disabled={busy}
-              >
-                {busy ? 'Taking you to checkout' : 'Checkout'}
+              <Button variant="solid" size="lg" className="mt-7 h-14 w-full" onClick={checkout}>
+                Checkout
               </Button>
-
-              {error && (
-                <p role="alert" className="mt-4 text-xs leading-relaxed text-accent">
-                  {error}
-                </p>
-              )}
 
               <p className="mt-4 text-xs leading-relaxed text-ash">
                 {shipping.note} Returns are accepted within 14 days, unworn and with
@@ -245,11 +220,9 @@ function Stepper({
 function ZonePicker({
   zone,
   onChange,
-  disabled,
 }: {
   zone: ShippingZone
   onChange: (zone: ShippingZone) => void
-  disabled?: boolean
 }) {
   const options: { value: ShippingZone; label: string }[] = [
     { value: 'uk', label: 'United Kingdom' },
@@ -257,7 +230,7 @@ function ZonePicker({
   ]
 
   return (
-    <fieldset className="mt-6" disabled={disabled}>
+    <fieldset className="mt-6">
       <legend className="text-sm text-fog">Delivering to</legend>
       <div className="mt-3 flex border border-line bg-paper">
         {options.map((option) => (

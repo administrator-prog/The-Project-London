@@ -45,7 +45,7 @@ src/
   lib/           utils (cn, formatPrice), motion, bag, checkout
   types/         shared TypeScript models
 
-api/             checkout, stripe-webhook, order, verify-access, subscribe
+api/             checkout, pay, stripe-webhook, order, verify-access, subscribe
 lib/             server-only — supabase, stripe, fulfilment, email, money,
                  commerce, access, rate-limit
 supabase/        migrations and the order-lifecycle test
@@ -53,7 +53,7 @@ supabase/        migrations and the order-lifecycle test
 
 ## Routes
 
-`/` home · `/shop` the collection · `/products/:id` the two dresses · `/about` · `/bag` · `/order/confirmed` · everything else 404s.
+`/` home · `/shop` · `/products/:id` · `/about` · `/bag` · `/checkout` · `/order/confirmed` · `/returns` · `/shipping` · `/faq` · everything else 404s.
 `/collections/*` and `/editorial/*` from the earlier, larger store structure redirect to `/shop`.
 
 ## Homepage sections
@@ -71,20 +71,28 @@ Everything is data-driven and typed, so wiring a backend means replacing the `sr
 
 ## Orders and payments
 
-Hosted Stripe Checkout, orders in Supabase, email through Resend.
+Payment is taken **on the site** with Stripe's Payment Element. Orders live in
+Supabase; email goes through Resend.
 
 ```
-Bag  ──POST /api/checkout──▶  place_order()          prices the bag from Postgres,
-                                                     checks stock, writes orders(pending)
-     ◀──────── session url ── Stripe Checkout Session
+Bag  ──POST /api/checkout──▶  place_order()   prices the bag from Postgres, checks
+                                              stock, opens orders(pending), returns a
+                                              one-order token and the delivery options
 
-Customer pays on Stripe's page
+/checkout   our own page: our layout, our type. Stripe supplies two themed
+            iframes — the address fields and the card fields — and nothing else.
 
-Stripe ──POST /api/stripe-webhook──▶  mark_order_paid()   records payment, decrements
-                                                          stock, then Resend sends the
-                                                          receipt and the studio alert
+     ──POST /api/pay──▶  prepare_payment()    looks up what the chosen rate costs,
+                                              writes the total, creates the
+                                              PaymentIntent for exactly that amount
 
-Customer ──▶ /order/confirmed?session_id=…  ──GET /api/order──▶  order_summary()
+     ──▶ stripe.confirmPayment()   card goes straight to Stripe, never to us
+
+Stripe ──POST /api/stripe-webhook──▶  mark_order_paid_by_intent()   records payment,
+                                              decrements stock, then Resend sends the
+                                              receipt and the studio alert
+
+Customer ──▶ /order/confirmed?payment_intent=…  ──GET /api/order──▶  order_summary_by_intent()
 ```
 
 ### The one rule
@@ -93,6 +101,10 @@ Customer ──▶ /order/confirmed?session_id=…  ──GET /api/order──�
 quantities and nothing else; `place_order()` reads every price out of the `products`
 table and computes the subtotal in SQL. A bag edited in devtools buys the real
 catalogue at the real price, or it does not buy at all.
+
+The same holds for delivery. The browser sends the **id** of a shipping rate, never
+its cost — `prepare_payment()` looks up the price and refuses a rate from a different
+zone, so a UK order cannot be paid at the £0 rate and shipped abroad.
 
 Money is held in **pence** everywhere it is calculated, and only becomes a formatted
 string at the edge — in an email or on a page.
@@ -124,10 +136,14 @@ supabase db push --linked
   posts from its own servers with no session cookie; gate it and every delivery gets a
   307 to `/access` and no order is ever marked paid. Its signature check is its
   authentication.
-- **Shipping zone is chosen on the bag, not at Stripe.** Stripe Checkout shows every
-  shipping option a session carries, so a session built with all three rates would offer
-  a London customer the £25 international one. The bag asks first and the session is
-  built with one zone's rates only.
+- **The address form's country list is UI, not a control.** Hosted Checkout enforced
+  allowed countries on Stripe's side; on our own page that restriction lives in the
+  browser. So `mark_order_paid_by_intent()` checks the delivery country against the
+  zone once the money lands and sets `zone_mismatch` — flagged for the studio, never
+  used to refuse a payment that has already gone through.
+- **The amount the Payment Element is mounted with is display only.** It decides which
+  payment methods to offer. The charge is whatever `prepare_payment()` wrote. If the
+  two ever disagree Stripe refuses the confirmation rather than taking the lower one.
 
 ### Stock
 
@@ -136,8 +152,9 @@ between — that would need an expiry and a reaper for bags abandoned on Stripe'
 which is a lot of machinery for a collection with fifty units a size.
 
 If a size does sell out in that window, the paid order is **never refused**. The money
-is already taken, so `mark_order_paid()` takes whatever stock is left, sets
-`stock_shortfall`, and the studio email says so in as many words.
+is already taken, so `mark_order_paid_by_intent()` takes whatever stock is left, sets
+`stock_shortfall`, and the studio email says so in as many words. The same applies to
+`zone_mismatch`: flag it, email it, let a person decide.
 
 ### Testing it
 
@@ -150,7 +167,9 @@ stripe listen --forward-to localhost:3000/api/stripe-webhook
 ```
 
 Card `4242 4242 4242 4242`, any future expiry, any CVC. `4000 0027 6000 3184` forces a
-3D Secure challenge; `4000 0000 0000 9995` declines for insufficient funds.
+3D Secure challenge, which is worth walking at least once — it is the one path that
+leaves the page and comes back through `return_url`. `4000 0000 0000 9995` declines for
+insufficient funds.
 
 ## Intentionally stubbed
 

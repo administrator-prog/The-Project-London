@@ -1,5 +1,3 @@
-import type Stripe from 'stripe'
-
 /** A line as the browser is allowed to describe it: no prices, ever. */
 export interface CheckoutLine {
   productId: string
@@ -28,27 +26,6 @@ export interface PlacedItem {
 }
 
 export const MAX_PER_LINE = 9
-export const MAX_LINES = 20
-
-/**
- * Where the international rate applies.
- *
- * Stripe validates the address against this list before it will take a card,
- * so anywhere missing here simply cannot check out. Edit freely — it is a
- * commercial decision, not a technical one. GB is deliberately absent: a UK
- * address belongs on the UK session, which has the free and next-day rates.
- */
-export const INTERNATIONAL_COUNTRIES: Stripe.Checkout.SessionCreateParams.ShippingAddressCollection.AllowedCountry[] =
-  [
-    'AT', 'AU', 'BE', 'BG', 'CA', 'CH', 'CY', 'CZ', 'DE', 'DK', 'EE', 'ES',
-    'FI', 'FR', 'GR', 'HR', 'HU', 'IE', 'IS', 'IT', 'JP', 'KR', 'LI', 'LT',
-    'LU', 'LV', 'MC', 'MT', 'NL', 'NO', 'NZ', 'PL', 'PT', 'RO', 'SE', 'SG',
-    'SI', 'SK', 'US', 'AE', 'HK', 'QA', 'SA', 'KW', 'BH', 'OM', 'IL', 'ZA',
-    'MY', 'MX',
-  ]
-
-export const UK_COUNTRIES: Stripe.Checkout.SessionCreateParams.ShippingAddressCollection.AllowedCountry[] =
-  ['GB']
 
 export function isShippingZone(value: unknown): value is ShippingZone {
   return value === 'uk' || value === 'international'

@@ -12,8 +12,8 @@ import { formatPence } from '@/lib/utils'
  * Where Stripe returns the customer.
  *
  * The order is read back from the server rather than assembled from anything
- * carried in the URL — the only thing the URL is trusted for is the session
- * id, and even that is just a lookup key.
+ * carried in the URL — the only thing the URL is trusted for is the payment
+ * intent id, and even that is just a lookup key.
  *
  * A first read can legitimately find the order still `pending`: the webhook is
  * a separate delivery and occasionally arrives second. So this polls a few
@@ -28,7 +28,7 @@ const MAX_POLLS = 8
 
 export default function OrderConfirmed() {
   const [params] = useSearchParams()
-  const sessionId = params.get('session_id')
+  const paymentIntentId = params.get('payment_intent')
   const { clear } = useBag()
 
   const [order, setOrder] = useState<OrderSummary | null>(null)
@@ -39,7 +39,7 @@ export default function OrderConfirmed() {
   const cleared = useRef(false)
 
   useEffect(() => {
-    if (!sessionId) {
+    if (!paymentIntentId) {
       setState('missing')
       return
     }
@@ -49,7 +49,7 @@ export default function OrderConfirmed() {
     let timer: ReturnType<typeof setTimeout>
 
     async function poll() {
-      const result = await fetchOrder(sessionId!)
+      const result = await fetchOrder(paymentIntentId!)
       if (cancelled) return
 
       if (result) {
@@ -80,7 +80,7 @@ export default function OrderConfirmed() {
       cancelled = true
       clearTimeout(timer)
     }
-  }, [sessionId, clear])
+  }, [paymentIntentId, clear])
 
   if (state === 'loading') return <Waiting />
   if (state === 'missing' || !order) return <NotFound />

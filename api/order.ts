@@ -10,8 +10,8 @@ export const config = { runtime: 'edge' }
 /**
  * What the confirmation page reads after Stripe sends the customer back.
  *
- * The session id in the URL is the only key — it is long, opaque and known
- * only to the person who just paid, and this whole site sits behind the
+ * The payment intent id in the URL is the only key — it is long, opaque and
+ * known only to the person who just paid, and this whole site sits behind the
  * password wall besides. Even so the response is a curated summary from
  * order_summary(), not the order row: no payment intent, no customer id.
  *
@@ -44,20 +44,21 @@ export default async function handler(request: Request) {
     return json({ ok: false, error: 'not_configured' }, 503)
   }
 
-  const sessionId = new URL(request.url).searchParams.get('session_id')?.trim()
+  const intentId = new URL(request.url).searchParams.get('payment_intent')?.trim()
 
-  // Stripe's ids are `cs_test_…` / `cs_live_…`. Anything else is not worth a
-  // round trip to the database.
-  if (!sessionId || !/^cs_[A-Za-z0-9_]{10,255}$/.test(sessionId)) {
-    return json({ ok: false, error: 'invalid_session' }, 400)
+  // Stripe's ids are `pi_…`. Anything else is not worth a round trip.
+  if (!intentId || !/^pi_[A-Za-z0-9_]{10,255}$/.test(intentId)) {
+    return json({ ok: false, error: 'invalid_intent' }, 400)
   }
 
   const supabase = serviceClient()
 
-  const { data, error } = await supabase.rpc('order_summary', { p_session_id: sessionId })
+  const { data, error } = await supabase.rpc('order_summary_by_intent', {
+    p_payment_intent: intentId,
+  })
 
   if (error) {
-    console.error('order_summary failed', error.message)
+    console.error('order_summary_by_intent failed', error.message)
     return json({ ok: false, error: 'lookup_failed' }, 500)
   }
 
@@ -70,14 +71,14 @@ export default async function handler(request: Request) {
   if (summary.status === 'pending') {
     try {
       const stripe = stripeClient()
-      const session = await stripe.checkout.sessions.retrieve(sessionId)
+      const intent = await stripe.paymentIntents.retrieve(intentId)
 
-      if (session.payment_status === 'paid') {
-        console.warn('Fulfilling from the confirmation page — webhook has not arrived', sessionId)
-        await fulfil(supabase, stripe, sessionId)
+      if (intent.status === 'succeeded') {
+        console.warn('Fulfilling from the confirmation page — webhook has not arrived', intentId)
+        await fulfil(supabase, stripe, intentId)
 
-        const { data: refreshed } = await supabase.rpc('order_summary', {
-          p_session_id: sessionId,
+        const { data: refreshed } = await supabase.rpc('order_summary_by_intent', {
+          p_payment_intent: intentId,
         })
         if (refreshed) return json({ ok: true, order: refreshed }, 200)
       }

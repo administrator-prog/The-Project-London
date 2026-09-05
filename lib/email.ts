@@ -233,6 +233,7 @@ export interface StudioArgs extends ConfirmationArgs {
   phone?: string | null
   shippingZone: string
   stockShortfall: boolean
+  zoneMismatch: boolean
 }
 
 /** The studio's copy: everything needed to pack and post it. */
@@ -240,6 +241,19 @@ export function studioEmail(order: StudioArgs): { subject: string; html: string 
   const pieces = order.items.reduce((n, i) => n + i.quantity, 0)
 
   const body = `
+    ${
+      order.zoneMismatch
+        ? `<tr>
+      <td style="padding:14px 16px;background:#fdf3e7;border-left:2px solid #b4763a;font-family:${SANS};font-size:13px;line-height:1.7;color:#7a4d1d;">
+        <strong>Destination does not match the delivery paid for.</strong> This
+        order was priced as ${escapeHtml(order.shippingZone === 'uk' ? 'United Kingdom' : 'International')}
+        but the address below is not. Decide whether to ship it, ask for the
+        difference, or refund before dispatching.
+      </td>
+    </tr>
+    <tr><td style="height:24px;"></td></tr>`
+        : ''
+    }
     ${
       order.stockShortfall
         ? `<tr>

@@ -5,67 +5,79 @@ import { confirmationEmail, sendEmail, studioEmail } from './email'
 import type { PlacedItem } from './commerce'
 
 /**
- * Turning a paid Stripe session into a fulfilled order.
+ * Turning a succeeded PaymentIntent into a fulfilled order.
  *
  * Shared by the webhook and the confirmation page. The webhook is the normal
- * route; the page calls the same code as a safety net so that a webhook which
- * is slow, misconfigured or pointed at the wrong deployment still cannot leave
- * a customer looking at an order that was never recorded.
+ * route; the page calls the same code as a safety net, so a webhook that is
+ * slow, misconfigured or pointed at the wrong deployment still cannot leave a
+ * customer looking at an order that was never recorded.
  *
- * Both paths are safe to run concurrently — mark_order_paid() takes a row lock
- * and reports whether this call was the one that did the work, and only that
- * call sends email.
+ * Both paths are safe to run at once — mark_order_paid_by_intent() takes a row
+ * lock and reports whether this call was the one that did the work.
  */
+
+export interface OrderRow {
+  id: string
+  reference: string
+  email: string | null
+  customer_name: string | null
+  phone: string | null
+  currency: string
+  subtotal_pence: number
+  shipping_pence: number | null
+  total_pence: number | null
+  shipping_method: string | null
+  shipping_zone: string
+  shipping_address: Record<string, unknown> | null
+  stock_shortfall: boolean
+  zone_mismatch: boolean
+  customer_email_sent_at: string | null
+  studio_email_sent_at: string | null
+}
+
+export interface FulfilResult {
+  alreadyPaid: boolean
+  order: OrderRow
+  items: PlacedItem[]
+}
 
 /**
  * Records the money, commits the stock, sends the two emails.
  *
- * The session is re-fetched rather than read off the event: the event payload
- * carries unexpanded ids, and the chosen shipping rate's name only exists once
- * `shipping_cost.shipping_rate` is expanded.
+ * The intent is re-fetched rather than read off the event, with the charge
+ * expanded: the billing details the customer actually typed live on the charge,
+ * not on the intent.
  */
 export async function fulfil(
   supabase: ReturnType<typeof serviceClient>,
   stripe: ReturnType<typeof stripeClient>,
-  sessionId: string,
+  paymentIntentId: string,
   eventId?: string,
-) {
-  const session = await stripe.checkout.sessions.retrieve(sessionId, {
-    expand: ['shipping_cost.shipping_rate'],
+): Promise<FulfilResult> {
+  const intent = await stripe.paymentIntents.retrieve(paymentIntentId, {
+    expand: ['latest_charge'],
   })
 
-  const shippingDetails = session.collected_information?.shipping_details ?? null
-  const shippingRate = session.shipping_cost?.shipping_rate
-  const shippingMethod =
-    shippingRate && typeof shippingRate !== 'string' ? shippingRate.display_name : null
+  const charge =
+    intent.latest_charge && typeof intent.latest_charge !== 'string' ? intent.latest_charge : null
 
-  const paymentIntent =
-    typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id
-  const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id
+  const billing = charge?.billing_details ?? null
+  const shipping = intent.shipping ?? charge?.shipping ?? null
 
-  const { data, error } = await supabase.rpc('mark_order_paid', {
-    p_session_id: session.id,
-    p_payment_intent: paymentIntent ?? null,
-    p_customer_id: customerId ?? null,
-    p_email: session.customer_details?.email ?? null,
-    p_customer_name: shippingDetails?.name ?? session.customer_details?.name ?? null,
-    p_phone: session.customer_details?.phone ?? null,
-    p_shipping_method: shippingMethod,
-    p_shipping_pence: session.shipping_cost?.amount_total ?? null,
-    p_total_pence: session.amount_total ?? null,
-    p_shipping_address: flattenAddress(shippingDetails),
-    p_billing_address: flattenAddress(session.customer_details),
+  const { data, error } = await supabase.rpc('mark_order_paid_by_intent', {
+    p_payment_intent: intent.id,
+    p_email: intent.receipt_email ?? billing?.email ?? null,
+    p_customer_name: shipping?.name ?? billing?.name ?? null,
+    p_phone: shipping?.phone ?? billing?.phone ?? null,
+    p_total_pence: intent.amount_received || intent.amount,
+    p_shipping_address: flattenAddress(shipping),
+    p_billing_address: flattenAddress(billing),
   })
 
-  if (error) throw new Error(`mark_order_paid failed: ${error.message}`)
+  if (error) throw new Error(`mark_order_paid_by_intent failed: ${error.message}`)
 
-  const result = data as {
-    alreadyPaid: boolean
-    order: OrderRow
-    items: PlacedItem[]
-  }
+  const result = data as FulfilResult
 
-  // Link the event to the order now that we know which one it was.
   if (eventId) {
     await supabase.from('stripe_events').update({ order_id: result.order.id }).eq('id', eventId)
   }
@@ -82,24 +94,6 @@ export async function fulfil(
   }
 
   return result
-}
-
-export interface OrderRow {
-  id: string
-  reference: string
-  email: string | null
-  customer_name: string | null
-  phone: string | null
-  currency: string
-  subtotal_pence: number
-  shipping_pence: number | null
-  total_pence: number | null
-  shipping_method: string | null
-  shipping_zone: string
-  shipping_address: Record<string, unknown> | null
-  stock_shortfall: boolean
-  customer_email_sent_at: string | null
-  studio_email_sent_at: string | null
 }
 
 /**
@@ -142,6 +136,7 @@ async function notify(
             phone: order.phone,
             shippingZone: order.shipping_zone,
             stockShortfall: order.stock_shortfall,
+            zoneMismatch: order.zone_mismatch,
           }),
         })
       : Promise.resolve(false),
@@ -165,12 +160,15 @@ async function notify(
 }
 
 /**
- * Stripe nests the address under the party it belongs to and keeps the name
- * beside it. Flattened into one object so the email template and anyone
- * reading the row in Supabase see a single postal address.
+ * Stripe keeps the name and phone beside the address rather than inside it.
+ * Flattened into one object so the email template and anyone reading the row
+ * in Supabase see a single postal address.
  */
 function flattenAddress(
-  source: { name?: string | null; address?: Stripe.Address | null } | null | undefined,
+  source:
+    | { name?: string | null; phone?: string | null; address?: Stripe.Address | null }
+    | null
+    | undefined,
 ): Record<string, unknown> | null {
   if (!source?.address) return null
   return { name: source.name ?? null, ...source.address }

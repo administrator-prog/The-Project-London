@@ -7,7 +7,7 @@ import { fulfil } from '../lib/fulfilment'
 export const config = { runtime: 'edge' }
 
 /**
- * Stripe's side of the conversation. This is the only place an order becomes
+ * Stripe's side of the conversation. This is the normal place an order becomes
  * paid — the browser's return to /order/confirmed is a courtesy, not evidence.
  * A customer who closes the tab the instant their card clears still gets a
  * recorded order, a decremented stock count and a receipt.
@@ -24,10 +24,9 @@ export const config = { runtime: 'edge' }
  */
 
 const HANDLED = new Set<Stripe.Event.Type>([
-  'checkout.session.completed',
-  'checkout.session.async_payment_succeeded',
-  'checkout.session.async_payment_failed',
-  'checkout.session.expired',
+  'payment_intent.succeeded',
+  'payment_intent.payment_failed',
+  'payment_intent.canceled',
 ])
 
 export default async function handler(request: Request) {
@@ -92,31 +91,25 @@ export default async function handler(request: Request) {
   }
 
   try {
-    const session = event.data.object as Stripe.Checkout.Session
+    const intent = event.data.object as Stripe.PaymentIntent
 
     switch (event.type) {
-      case 'checkout.session.completed':
-      case 'checkout.session.async_payment_succeeded': {
-        // A bank-debit session can complete while still unpaid; the money
-        // arrives later as async_payment_succeeded. Only paid counts.
-        if (session.payment_status === 'unpaid') {
-          return new Response('Awaiting payment', { status: 200 })
-        }
-        await fulfil(supabase, stripe, session.id, event.id)
+      case 'payment_intent.succeeded': {
+        await fulfil(supabase, stripe, intent.id, event.id)
         break
       }
 
-      case 'checkout.session.async_payment_failed': {
-        await supabase.rpc('mark_order_closed', {
-          p_session_id: session.id,
+      case 'payment_intent.payment_failed': {
+        await supabase.rpc('mark_intent_closed', {
+          p_payment_intent: intent.id,
           p_status: 'failed',
         })
         break
       }
 
-      case 'checkout.session.expired': {
-        await supabase.rpc('mark_order_closed', {
-          p_session_id: session.id,
+      case 'payment_intent.canceled': {
+        await supabase.rpc('mark_intent_closed', {
+          p_payment_intent: intent.id,
           p_status: 'cancelled',
         })
         break

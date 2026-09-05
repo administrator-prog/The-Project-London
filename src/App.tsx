@@ -5,6 +5,7 @@ import Shop from '@/pages/Shop'
 import Product from '@/pages/Product'
 import About from '@/pages/About'
 import Bag from '@/pages/Bag'
+import Checkout from '@/pages/Checkout'
 import OrderConfirmed from '@/pages/OrderConfirmed'
 import Returns from '@/pages/Returns'
 import Shipping from '@/pages/Shipping'
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="products/:id" element={<Product />} />
         <Route path="about" element={<About />} />
         <Route path="bag" element={<Bag />} />
+        <Route path="checkout" element={<Checkout />} />
         <Route path="order/confirmed" element={<OrderConfirmed />} />
         <Route path="returns" element={<Returns />} />
         <Route path="shipping" element={<Shipping />} />
