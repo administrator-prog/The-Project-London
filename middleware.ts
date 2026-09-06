@@ -47,9 +47,47 @@ function redirect(location: string) {
   })
 }
 
+/**
+ * Launch.
+ *
+ * SITE_OPEN_AT is an instant — `2026-09-06T18:00:00+01:00` reads as six in the
+ * evening, British time, and carries its own offset so nobody has to convert
+ * anything or remember whether the clocks have gone back. Until it passes the
+ * wall behaves exactly as it does now; after it, everything falls through.
+ *
+ * Read per request rather than at boot, so the site opens by itself at that
+ * moment with nobody watching and nothing to redeploy.
+ *
+ * Anything unreadable keeps the site shut. A typo in a launch time must never
+ * be the thing that publishes the site.
+ */
+function siteIsOpen(): boolean {
+  const value = process.env.SITE_OPEN_AT?.trim()
+  if (!value) return false
+
+  const opensAt = Date.parse(value)
+  if (Number.isNaN(opensAt)) {
+    console.error('SITE_OPEN_AT is not a date I can read:', value)
+    return false
+  }
+
+  return Date.now() >= opensAt
+}
+
 export default async function middleware(request: Request) {
   const url = new URL(request.url)
   const { pathname } = url
+
+  /*
+   * Checked before the secret, deliberately: once the site is open a missing
+   * WEBSITE_ACCESS is no longer a misconfiguration to fail closed on, it is
+   * just a variable nobody needs any more. The gate itself sends people home
+   * rather than showing a password box that guards nothing.
+   */
+  if (siteIsOpen()) {
+    if (pathname === '/access' || pathname === '/access.html') return redirect('/')
+    return next()
+  }
 
   const secret = process.env.WEBSITE_ACCESS
   // Fail closed on a missing secret, except for the gate itself — otherwise a
