@@ -249,6 +249,114 @@ export function confirmationEmail(order: ConfirmationArgs): { subject: string; h
   }
 }
 
+export interface ShippedArgs {
+  reference: string
+  customerName?: string | null
+  items: PlacedItem[]
+  shippingMethod?: string | null
+  shippingAddress?: Record<string, unknown> | null
+  trackingCarrier?: string | null
+  trackingNumber?: string | null
+  trackingUrl?: string | null
+}
+
+/**
+ * The dispatch note.
+ *
+ * The tracking block only appears when there is a number to show, and the
+ * number is only a link when a URL was supplied. Carrier tracking URLs change
+ * shape without warning, and a dead link in a dispatch email is worse than a
+ * number the customer pastes in themselves.
+ */
+export function shippedEmail(order: ShippedArgs): { subject: string; html: string } {
+  const firstName = (order.customerName ?? '').trim().split(/\s+/)[0]
+  const greeting = firstName ? `On its way, ${escapeHtml(firstName)}` : 'On its way'
+
+  const carrier = (order.trackingCarrier ?? '').trim()
+  const number = (order.trackingNumber ?? '').trim()
+  const url = (order.trackingUrl ?? '').trim()
+
+  const tracking = number
+    ? `
+    <tr>
+      <td style="padding-top:36px;font-family:${SANS};font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:${ASH};padding-bottom:10px;">
+        ${carrier ? escapeHtml(carrier) : 'Tracking'}
+      </td>
+    </tr>
+    <tr>
+      <td style="font-family:${SANS};font-size:14px;line-height:1.7;color:${FOG};">
+        ${
+          url
+            ? `<a href="${escapeHtml(url)}" style="color:${INK};text-decoration:underline;">${escapeHtml(number)}</a>`
+            : escapeHtml(number)
+        }
+      </td>
+    </tr>`
+    : ''
+
+  const body = `
+    <tr>
+      <td style="font-family:${SERIF};font-size:34px;line-height:1.2;color:${INK};padding-bottom:18px;">
+        ${greeting}
+      </td>
+    </tr>
+    <tr>
+      <td style="font-family:${SANS};font-size:14px;line-height:1.75;color:${FOG};padding-bottom:8px;">
+        Your order has left the studio${order.shippingMethod ? ` by ${escapeHtml(order.shippingMethod)}` : ''}.
+        ${number ? 'You can follow it below.' : 'It is on its way to you now.'}
+      </td>
+    </tr>
+    <tr>
+      <td style="font-family:${SANS};font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:${ASH};padding:24px 0 8px;">
+        Order ${escapeHtml(order.reference)}
+      </td>
+    </tr>
+    <tr>
+      <td style="padding-top:12px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          ${order.items
+            .map(
+              (item) => `
+          <tr>
+            <td style="padding:16px 0;border-bottom:1px solid ${LINE};font-family:${SANS};font-size:14px;color:${INK};">
+              <div style="font-family:${SERIF};font-size:17px;line-height:1.3;">${escapeHtml(item.productName)}</div>
+              <div style="margin-top:6px;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:${ASH};">
+                Size ${escapeHtml(item.size)} &nbsp;·&nbsp; Quantity ${item.quantity}
+              </div>
+            </td>
+          </tr>`,
+            )
+            .join('')}
+        </table>
+      </td>
+    </tr>
+    ${tracking}
+    ${
+      order.shippingAddress
+        ? `<tr>
+      <td style="padding-top:36px;font-family:${SANS};font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:${ASH};padding-bottom:10px;">
+        Delivering to
+      </td>
+    </tr>
+    <tr>
+      <td style="font-family:${SANS};font-size:14px;line-height:1.7;color:${FOG};">
+        ${formatAddress(order.shippingAddress)}
+      </td>
+    </tr>`
+        : ''
+    }
+    <tr>
+      <td style="padding-top:36px;font-family:${SANS};font-size:13px;line-height:1.8;color:${ASH};">
+        Returns are accepted within 14 days of delivery, unworn and with tags attached.
+      </td>
+    </tr>`
+
+  return {
+    subject: `Your order ${order.reference} is on its way`,
+    html: shell(`Order ${order.reference} has been dispatched.`, body),
+  }
+}
+
 export interface StudioArgs extends ConfirmationArgs {
   email?: string | null
   phone?: string | null

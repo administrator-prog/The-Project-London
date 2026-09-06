@@ -58,9 +58,14 @@ export async function passwordMatches(submitted: string, secret: string) {
   return constantTimeEqual(a, b)
 }
 
-/** Mints `<expiresAtMs>.<signature>` for the session cookie. */
-export async function createToken(secret: string) {
-  const expiresAt = String(Date.now() + MAX_AGE_SECONDS * 1000)
+/**
+ * Mints `<expiresAtMs>.<signature>` for the session cookie.
+ *
+ * The lifetime is baked into the signed half, so a shorter one cannot be
+ * lengthened by editing the cookie. The admin session passes its own.
+ */
+export async function createToken(secret: string, maxAgeSeconds = MAX_AGE_SECONDS) {
+  const expiresAt = String(Date.now() + maxAgeSeconds * 1000)
   return `${expiresAt}.${toBase64Url(await hmac(expiresAt, secret))}`
 }
 

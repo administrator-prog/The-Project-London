@@ -163,7 +163,10 @@ async function notify(
   ])
 }
 
-type SendStamp = 'customer_email_sent_at' | 'studio_email_sent_at'
+export type SendStamp =
+  | 'customer_email_sent_at'
+  | 'studio_email_sent_at'
+  | 'shipped_email_sent_at'
 
 /**
  * Wins the right to send one email, or returns false.
@@ -175,7 +178,7 @@ type SendStamp = 'customer_email_sent_at' | 'studio_email_sent_at'
  * the write either side of a round trip to Resend, and anything that called
  * fulfil() during that window read a null stamp and sent its own copy.
  */
-async function claimSend(
+export async function claimSend(
   supabase: ReturnType<typeof serviceClient>,
   orderId: string,
   column: SendStamp,
@@ -203,7 +206,7 @@ async function claimSend(
  * emailed, and a webhook retry would sail past it. A second copy is a far
  * smaller failure than no receipt at all.
  */
-async function releaseSend(
+export async function releaseSend(
   supabase: ReturnType<typeof serviceClient>,
   orderId: string,
   column: SendStamp,

@@ -11,6 +11,7 @@ import Returns from '@/pages/Returns'
 import Shipping from '@/pages/Shipping'
 import FAQ from '@/pages/FAQ'
 import SizeGuide from '@/pages/SizeGuide'
+import Admin from '@/pages/Admin'
 import NotFound from '@/pages/NotFound'
 
 export default function App() {
@@ -28,6 +29,7 @@ export default function App() {
         <Route path="shipping" element={<Shipping />} />
         <Route path="faq" element={<FAQ />} />
         <Route path="size-guide" element={<SizeGuide />} />
+        <Route path="admin" element={<Admin />} />
         {/* Legacy paths from the larger store structure. */}
         <Route path="collections/*" element={<Navigate to="/shop" replace />} />
         <Route path="editorial/*" element={<Navigate to="/shop" replace />} />
