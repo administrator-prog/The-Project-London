@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 import { useParams, Link, Navigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Minus, Truck, RotateCcw } from 'lucide-react'
@@ -9,6 +10,7 @@ import { Container } from '@/components/ui/Container'
 import { Section } from '@/components/ui/Section'
 import { SectionHeading } from '@/components/ui/SectionHeading'
 import { Button } from '@/components/ui/Button'
+import { SizeTable } from '@/components/ui/SizeTable'
 import { ProductCard } from '@/components/product/ProductCard'
 import { EASE_OUT_EXPO } from '@/lib/motion'
 import { useBag } from '@/lib/bag'
@@ -35,8 +37,8 @@ export default function Product() {
 
   const other = products.find((p) => p.id !== product.id)
 
-  const accordions = [
-    { title: 'Size & Fit', body: product.fit },
+  const accordions: { title: string; body: string; extra?: ReactNode }[] = [
+    { title: 'Size & Fit', body: product.fit, extra: <SizeTable className="pb-2" /> },
     { title: 'Composition & Care', body: product.care },
     { title: 'Shipping, Exchange & Returns', body: product.shipping },
   ]
@@ -128,7 +130,12 @@ export default function Product() {
 
             {/* Sizes */}
             <div className="mt-9">
-              <span className="label-sm text-ink">Size</span>
+              <div className="flex items-baseline justify-between gap-4">
+                <span className="label-sm text-ink">Size</span>
+                <Link to="/size-guide" className="text-sm text-ash link-underline hover:text-ink">
+                  Size guide
+                </Link>
+              </div>
               <div className="mt-3 grid grid-cols-4 gap-2">
                 {product.sizes.map((size) => (
                   <button
@@ -220,9 +227,12 @@ export default function Product() {
                           transition={{ duration: 0.4, ease: EASE_OUT_EXPO }}
                           className="overflow-hidden"
                         >
-                          <p className="whitespace-pre-line pb-6 text-sm leading-relaxed text-fog">
-                            {a.body}
-                          </p>
+                          <div className="pb-6">
+                            <p className="whitespace-pre-line text-sm leading-relaxed text-fog">
+                              {a.body}
+                            </p>
+                            {a.extra}
+                          </div>
                         </motion.div>
                       )}
                     </AnimatePresence>

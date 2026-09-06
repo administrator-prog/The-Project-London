@@ -76,6 +76,21 @@ export const shippingNotes: PolicyBlock[] = [
   },
 ]
 
+/**
+ * Sits under the size table. Deliberately says nothing about *how* to take a
+ * measurement, and does not claim the figures are body or garment
+ * measurements — the guide they came from does not say, and guessing at it
+ * here is how a customer ends up ordering the wrong size.
+ */
+export const sizeGuideNotes: PolicyBlock[] = [
+  {
+    paragraphs: [
+      'All measurements are in inches. Each product page carries the model’s height and the size she is wearing under Size & Fit.',
+      `Between two sizes, or unsure which to choose? Email ${CONTACT_EMAIL} and we will help you decide before you order.`,
+    ],
+  },
+]
+
 export interface FaqGroup {
   heading: string
   items: { question: string; answer: string }[]
@@ -138,11 +153,11 @@ export const faqs: FaqGroup[] = [
     items: [
       {
         question: 'How do I find my size?',
-        answer: 'Each product page carries detailed measurements under Size & Fit to help you find your perfect fit.',
+        answer: 'Our Size Guide sets out UK and US sizes alongside bust, waist and hip measurements. The same table appears on each product page under Size & Fit.',
       },
       {
         question: 'Are the dresses true to size?',
-        answer: 'Yes, our dresses are true to size. For the most accurate fit we recommend referring to the measurements on each product page.',
+        answer: 'Yes, our dresses are true to size. For the most accurate fit we recommend checking your measurements against the Size Guide.',
       },
     ],
   },

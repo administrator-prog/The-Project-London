@@ -9,7 +9,6 @@ export default function Returns() {
       <PageHeader
         title={'Returns & Exchanges'}
         size="sm"
-        description="Fourteen days from the day it arrives, unworn and with its tags."
         crumbs={[{ label: 'Home', to: '/' }, { label: 'Returns & Exchanges' }]}
       />
       <Container>

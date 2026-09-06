@@ -10,6 +10,7 @@ import OrderConfirmed from '@/pages/OrderConfirmed'
 import Returns from '@/pages/Returns'
 import Shipping from '@/pages/Shipping'
 import FAQ from '@/pages/FAQ'
+import SizeGuide from '@/pages/SizeGuide'
 import NotFound from '@/pages/NotFound'
 
 export default function App() {
@@ -26,6 +27,7 @@ export default function App() {
         <Route path="returns" element={<Returns />} />
         <Route path="shipping" element={<Shipping />} />
         <Route path="faq" element={<FAQ />} />
+        <Route path="size-guide" element={<SizeGuide />} />
         {/* Legacy paths from the larger store structure. */}
         <Route path="collections/*" element={<Navigate to="/shop" replace />} />
         <Route path="editorial/*" element={<Navigate to="/shop" replace />} />

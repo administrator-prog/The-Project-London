@@ -11,7 +11,6 @@ export default function Shipping() {
       <PageHeader
         title={'Shipping'}
         size="sm"
-        description="Complimentary across the United Kingdom, a flat rate everywhere else."
         crumbs={[{ label: 'Home', to: '/' }, { label: 'Shipping' }]}
       />
 
