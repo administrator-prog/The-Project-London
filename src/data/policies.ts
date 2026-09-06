@@ -153,11 +153,11 @@ export const faqs: FaqGroup[] = [
     items: [
       {
         question: 'How do I find my size?',
-        answer: 'Our Size Guide sets out UK and US sizes alongside bust, waist and hip measurements. The same table appears on each product page under Size & Fit.',
+        answer: 'Please refer to our size guide on each product page for detailed measurements to help you find your perfect fit.',
       },
       {
         question: 'Are the dresses true to size?',
-        answer: 'Yes, our dresses are true to size. For the most accurate fit we recommend checking your measurements against the Size Guide.',
+        answer: 'Yes, our dresses are true to size. For the most accurate fit, we recommend referring to our size guide on each product page for detailed measurements.',
       },
     ],
   },

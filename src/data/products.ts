@@ -3,8 +3,14 @@ import { PEARL_IMAGES, FLORENCE_IMAGES } from './images'
 
 const SIZES = ['XS', 'S', 'M', 'L']
 
+/*
+ * Rendered with `whitespace-pre-line`, so a single \n is a line break and \n\n
+ * is a paragraph gap. The two opening lines are deliberately short and carry
+ * no prices: the £7.95 next-day and £25 international rates live on /shipping
+ * and at checkout, which is where they have to agree with `shipping_rates`.
+ */
 const SHIPPING =
-  'Complimentary UK delivery by Royal Mail, or DPD Next Day for £7.95. International delivery is a flat £25. Orders are dispatched within 1–2 working days.\n\nIf you decide to return your order, you can do so within 14 days of delivery for a full refund. Items must be unworn, in their original condition, with all original tags attached and returned in their original packaging. Return postage is the responsibility of the customer.'
+  'Complimentary UK delivery\nNext day delivery available\n\nIf you decide to return your order, you can do so within 14 days of delivery for a full refund. Items must be unworn, in their original condition, with all original tags attached and returned in their original packaging. Return postage is the responsibility of the customer.'
 
 export const products: Product[] = [
   {
