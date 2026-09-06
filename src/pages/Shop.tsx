@@ -10,7 +10,7 @@ export default function Shop() {
       <PageHeader
         title={'Shop'}
         size="sm"
-        description="Two pieces, considered down to the smallest detail — from the silhouette to the finishing touches."
+        description="Two pieces, considered down to the smallest detail, from the silhouette to the finishing touches."
         crumbs={[{ label: 'Home', to: '/' }, { label: 'Shop' }]}
       />
 
