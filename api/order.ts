@@ -1,4 +1,4 @@
-import { isSameOrigin } from '../lib/access'
+import { isSameOriginRead } from '../lib/access'
 import { clientKey, createRateLimiter } from '../lib/rate-limit'
 import { CHECKOUT_ENV, missingEnv } from '../lib/config'
 import { serviceClient } from '../lib/supabase'
@@ -32,7 +32,7 @@ function json(body: unknown, status: number) {
 
 export default async function handler(request: Request) {
   if (request.method !== 'GET') return json({ ok: false }, 405)
-  if (!isSameOrigin(request)) return json({ ok: false, error: 'bad_origin' }, 403)
+  if (!isSameOriginRead(request)) return json({ ok: false, error: 'bad_origin' }, 403)
 
   if (limiter.check(clientKey(request))) {
     return json({ ok: false, error: 'rate_limited' }, 429)

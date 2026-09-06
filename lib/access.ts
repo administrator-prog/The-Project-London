@@ -139,3 +139,21 @@ export function readCookie(request: Request, name: string) {
   }
   return undefined
 }
+
+/**
+ * The same check, for a read-only GET.
+ *
+ * Browsers only attach `Origin` when a request could be cross-origin — a
+ * non-GET method, or a genuine CORS request. A same-origin `fetch('/api/…')`
+ * therefore arrives with no `Origin` at all, so requiring one on a GET refuses
+ * every legitimate call while stopping nothing.
+ *
+ * A mismatched origin is still refused. An absent one is what normal use looks
+ * like, and a cross-site GET cannot read the response anyway: no CORS headers
+ * come back, so the browser hands the caller nothing.
+ */
+export function isSameOriginRead(request: Request) {
+  const origin = request.headers.get('origin')
+  if (!origin) return true
+  return isSameOrigin(request)
+}
