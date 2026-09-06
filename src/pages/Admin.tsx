@@ -50,33 +50,54 @@ type Filter = 'to-ship' | 'shipped' | 'all'
 
 export default function Admin() {
   const [orders, setOrders] = useState<AdminOrder[] | null>(null)
-  const [authed, setAuthed] = useState<boolean | null>(null)
+  const [state, setState] = useState<'loading' | 'signin' | 'ready' | 'error'>('loading')
   const [filter, setFilter] = useState<Filter>('to-ship')
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
+    setError(null)
+
+    let response: Response
     try {
-      const response = await fetch('/api/admin/orders')
+      response = await fetch('/api/admin/orders')
+    } catch {
+      setState('error')
+      setError('Could not reach the server.')
+      return
+    }
 
-      if (response.status === 401) {
-        setAuthed(false)
-        return
-      }
-      if (!response.ok) {
-        setError('Could not load orders.')
-        setAuthed(true)
-        return
-      }
+    if (response.status === 401) {
+      setState('signin')
+      return
+    }
 
-      // A dev server with no API answers this with the app's own index.html,
-      // which parses as neither JSON nor an error worth showing twice.
+    if (!response.ok) {
+      /*
+       * Worth naming, because these mean different things and one of them is
+       * the common one. A 404 is a deployment that does not carry these routes
+       * yet; 500 is almost always the migration not having been run, since
+       * admin_order_list() is the only thing this endpoint calls.
+       */
+      setState('error')
+      setError(
+        response.status === 404
+          ? 'This deployment does not have the admin API (404). Redeploy from the latest commit.'
+          : response.status === 503
+            ? 'Supabase is not configured for this deployment (503).'
+            : response.status === 500
+              ? 'The order list query failed (500) — most likely the admin migration has not been run.'
+              : `The server answered ${response.status}.`,
+      )
+      return
+    }
+
+    try {
       const body = (await response.json()) as { orders?: AdminOrder[] }
       setOrders(body.orders ?? [])
-      setAuthed(true)
-      setError(null)
+      setState('ready')
     } catch {
-      setError('Could not load orders.')
-      setAuthed(true)
+      setState('error')
+      setError('The server did not return an order list.')
     }
   }, [])
 
@@ -84,8 +105,9 @@ export default function Admin() {
     void load()
   }, [load])
 
-  if (authed === null) return <Waiting />
-  if (!authed) return <SignIn onDone={load} />
+  if (state === 'loading') return <Waiting />
+  if (state === 'signin') return <SignIn onDone={load} />
+  if (state === 'error') return <Failed message={error} onRetry={load} />
 
   const shown = (orders ?? []).filter((order) =>
     filter === 'all' ? true : filter === 'shipped' ? order.shipped_at : !order.shipped_at,
@@ -111,8 +133,6 @@ export default function Admin() {
             ))}
           </div>
 
-          {error && <p className="mt-6 text-sm text-fog">{error}</p>}
-
           {shown.length === 0 ? (
             <p className="mt-10 text-[0.95rem] text-fog">Nothing here.</p>
           ) : (
@@ -124,6 +144,19 @@ export default function Admin() {
           )}
         </div>
       </Container>
+    </div>
+  )
+}
+
+function Failed({ message, onRetry }: { message: string | null; onRetry: () => void }) {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center bg-paper px-6">
+      <div className="max-w-sm text-center">
+        <p className="text-[0.95rem] leading-relaxed text-fog">{message ?? 'Something went wrong.'}</p>
+        <button onClick={onRetry} className="mt-6 label-sm text-ink link-underline">
+          Try again
+        </button>
+      </div>
     </div>
   )
 }
