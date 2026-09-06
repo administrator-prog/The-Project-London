@@ -2,7 +2,7 @@ import { Container } from '@/components/ui/Container'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Prose } from '@/components/ui/Prose'
 import { Reveal } from '@/components/ui/Reveal'
-import { internationalShipping, shippingNotes, ukShipping } from '@/data/policies'
+import { internationalShipping, ukShipping, ukShippingNotes } from '@/data/policies'
 import type { ShippingOption } from '@/data/policies'
 
 export default function Shipping() {
@@ -16,11 +16,14 @@ export default function Shipping() {
 
       <Container>
         <div className="max-w-2xl">
-          <Rates heading="United Kingdom" options={ukShipping} />
-          <Rates heading="International" options={internationalShipping} className="mt-12" />
+          <Rates heading="UK Delivery" options={ukShipping} />
+
+          <div className="mt-10">
+            <Prose blocks={ukShippingNotes} />
+          </div>
 
           <div className="mt-14">
-            <Prose blocks={shippingNotes} />
+            <Prose blocks={internationalShipping} />
           </div>
         </div>
       </Container>
