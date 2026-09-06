@@ -74,6 +74,25 @@ const PAPER = '#faf8f5'
 const SERIF = "'Instrument Serif', Georgia, 'Times New Roman', serif"
 const SANS = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif"
 
+/**
+ * The black wordmark, over the light paper these emails are set on.
+ *
+ * The same file the site's header uses — kept as a literal rather than
+ * imported from `src/data/images.ts`, which belongs to the browser bundle and
+ * is not on this side of the build. If BRAND.logoDark ever moves, move it here
+ * too.
+ *
+ * It has to be an absolute URL on a host that answers without a cookie: the
+ * site itself sits behind the password wall, so anything served from our own
+ * domain would come back as a redirect to /access in every inbox. The CDN is
+ * open, which is what makes it usable here.
+ */
+const LOGO_SRC = 'https://cdn.estateonline.ai/The%20Project%20London/BLACK%20FONT%20(1).png'
+
+/** Artwork is 8325 × 1819, so the wordmark keeps a 4.58:1 ratio. */
+const LOGO_WIDTH = 220
+const LOGO_HEIGHT = 48
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
@@ -124,8 +143,10 @@ function shell(preheader: string, body: string): string {
       <td align="center" style="padding:48px 20px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
           <tr>
-            <td style="padding-bottom:40px;font-family:${SANS};font-size:12px;letter-spacing:0.22em;text-transform:uppercase;color:${INK};">
-              The Project London
+            <td style="padding-bottom:40px;">
+              <img src="${LOGO_SRC}" alt="The Project London"
+                width="${LOGO_WIDTH}" height="${LOGO_HEIGHT}"
+                style="display:block;width:${LOGO_WIDTH}px;height:auto;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;">
             </td>
           </tr>
           ${body}

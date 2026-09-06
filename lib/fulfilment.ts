@@ -101,6 +101,11 @@ export async function fulfil(
  * order is already safely recorded by this point; a Resend outage should cost
  * a receipt, not trigger three days of Stripe retries against a webhook that
  * would re-run the whole fulfilment each time.
+ *
+ * Each send is claimed in the database before it goes out — see claimSend.
+ * The webhook and the confirmation page can both be inside this function for
+ * the same order at the same moment, and the customer must still receive one
+ * receipt rather than one per caller.
  */
 async function notify(
   supabase: ReturnType<typeof serviceClient>,
@@ -122,41 +127,93 @@ async function notify(
   const studioAddress = process.env.STUDIO_ORDER_EMAIL
   const replyTo = process.env.ORDER_REPLY_TO || studioAddress
 
-  const [customerSent, studioSent] = await Promise.all([
-    order.email && !order.customer_email_sent_at
-      ? sendEmail({ to: order.email, replyTo, ...confirmationEmail(common) })
-      : Promise.resolve(false),
-    studioAddress && !order.studio_email_sent_at
-      ? sendEmail({
-          to: studioAddress,
-          replyTo: order.email ?? undefined,
-          ...studioEmail({
-            ...common,
-            email: order.email,
-            phone: order.phone,
-            shippingZone: order.shipping_zone,
-            stockShortfall: order.stock_shortfall,
-            zoneMismatch: order.zone_mismatch,
-          }),
-        })
-      : Promise.resolve(false),
+  await Promise.all([
+    (async () => {
+      if (!order.email || order.customer_email_sent_at) return
+      if (!(await claimSend(supabase, order.id, 'customer_email_sent_at'))) return
+
+      const sent = await sendEmail({ to: order.email, replyTo, ...confirmationEmail(common) })
+      if (!sent) {
+        console.error('Confirmation email was not sent for', order.reference)
+        await releaseSend(supabase, order.id, 'customer_email_sent_at')
+      }
+    })(),
+
+    (async () => {
+      if (!studioAddress || order.studio_email_sent_at) return
+      if (!(await claimSend(supabase, order.id, 'studio_email_sent_at'))) return
+
+      const sent = await sendEmail({
+        to: studioAddress,
+        replyTo: order.email ?? undefined,
+        ...studioEmail({
+          ...common,
+          email: order.email,
+          phone: order.phone,
+          shippingZone: order.shipping_zone,
+          stockShortfall: order.stock_shortfall,
+          zoneMismatch: order.zone_mismatch,
+        }),
+      })
+      if (!sent) {
+        console.error('Studio notification was not sent for', order.reference)
+        await releaseSend(supabase, order.id, 'studio_email_sent_at')
+      }
+    })(),
   ])
+}
 
-  if (!customerSent && order.email && !order.customer_email_sent_at) {
-    console.error('Confirmation email was not sent for', order.reference)
-  }
-  if (!studioSent && !order.studio_email_sent_at) {
-    console.error('Studio notification was not sent for', order.reference)
+type SendStamp = 'customer_email_sent_at' | 'studio_email_sent_at'
+
+/**
+ * Wins the right to send one email, or returns false.
+ *
+ * The stamp is written *before* the email goes out rather than after, and only
+ * where it is still null. That is a single UPDATE, so of two callers racing on
+ * the same order exactly one can match the row and the other comes back with
+ * nothing — which is the whole point. Stamping afterwards left the read and
+ * the write either side of a round trip to Resend, and anything that called
+ * fulfil() during that window read a null stamp and sent its own copy.
+ */
+async function claimSend(
+  supabase: ReturnType<typeof serviceClient>,
+  orderId: string,
+  column: SendStamp,
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('orders')
+    .update({ [column]: new Date().toISOString() })
+    .eq('id', orderId)
+    .is(column, null)
+    .select('id')
+
+  if (error) {
+    // Not fatal, but do not send on a claim we cannot prove we won.
+    console.error('Could not claim', column, error.message)
+    return false
   }
 
-  const now = new Date().toISOString()
-  const stamps: Record<string, string> = {}
-  if (customerSent) stamps.customer_email_sent_at = now
-  if (studioSent) stamps.studio_email_sent_at = now
+  return (data?.length ?? 0) === 1
+}
 
-  if (Object.keys(stamps).length > 0) {
-    await supabase.from('orders').update(stamps).eq('id', order.id)
-  }
+/**
+ * Hands the claim back when the send failed.
+ *
+ * Keeping it would mean the order is marked as emailed when nobody was
+ * emailed, and a webhook retry would sail past it. A second copy is a far
+ * smaller failure than no receipt at all.
+ */
+async function releaseSend(
+  supabase: ReturnType<typeof serviceClient>,
+  orderId: string,
+  column: SendStamp,
+) {
+  const { error } = await supabase
+    .from('orders')
+    .update({ [column]: null })
+    .eq('id', orderId)
+
+  if (error) console.error('Could not release', column, error.message)
 }
 
 /**
