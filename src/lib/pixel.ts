@@ -1,13 +1,14 @@
 import { useSyncExternalStore } from 'react'
 
 /**
- * The Meta Pixel, behind the visitor's consent.
+ * The Meta Pixel, on unless the visitor opts out.
  *
- * Nothing from Meta is loaded until the visitor accepts: no script, no
- * cookie, no request. That is UK GDPR and PECR, which treat advertising
- * cookies as non-essential. Every call into here is safe to make regardless —
- * without consent it simply does nothing, so the pages that fire events never
- * need to ask first.
+ * It loads on the first page, before the cookie banner is answered, so the
+ * landing page and an ad's fbclid are captured. "Accept Essential" turns it
+ * off and takes back its cookies. This is opt-out, not the opt-in consent
+ * PECR asks of advertising cookies — a deliberate choice, made knowingly.
+ * Every call into here is safe to make regardless — after an opt-out it
+ * simply does nothing, so the pages that fire events never need to ask first.
  *
  * Mirrors META_PIXEL_ID in lib/meta.ts, which sends the server-side copy of
  * Purchase. The id is public by design; it is in every page that runs a pixel.
@@ -60,8 +61,8 @@ export function setConsent(value: Consent | null) {
     /* Private browsing — the choice lasts as long as the tab. */
   }
 
-  if (value !== 'granted') {
-    // Already loaded from an earlier yes: tell it to stop, and take back the
+  if (value === 'denied') {
+    // Already loaded: tell it to stop, and take back the
     // cookies it set, rather than wait for the next page load.
     window.fbq?.('consent', 'revoke')
     for (const name of ['_fbp', '_fbc']) {
@@ -90,8 +91,8 @@ export function useConsent(): Consent | null {
 
 /**
  * Meta's base code, as a function rather than a <script> in index.html, so it
- * runs only once consent is given. Calls made before fbevents.js arrives are
- * queued by the stub and replayed when it does.
+ * runs only while the visitor has not opted out. Calls made before fbevents.js
+ * arrives are queued by the stub and replayed when it does.
  */
 function load(): Fbq {
   if (window.fbq) return window.fbq
@@ -136,9 +137,12 @@ export interface EventParams {
   currency: string
 }
 
-/** Sends one event, or nothing at all without consent. */
+/** Whether the pixel may run: always, until the visitor opts out. */
+const allowed = () => consent !== 'denied'
+
+/** Sends one event, or nothing at all after an opt-out. */
 export function track(event: StandardEvent, params?: EventParams, eventId?: string) {
-  if (consent !== 'granted') return false
+  if (!allowed()) return false
   const fbq = load()
   if (eventId) fbq('track', event, params ?? {}, { eventID: eventId })
   else if (params) fbq('track', event, params)
@@ -190,7 +194,7 @@ export interface AdTracking {
 }
 
 export function adTracking(): AdTracking {
-  if (consent !== 'granted') return { consent: false }
+  if (!allowed()) return { consent: false }
   const cookie = (name: string) =>
     document.cookie
       .split('; ')

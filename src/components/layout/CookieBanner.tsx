@@ -9,11 +9,11 @@ import { setConsent, track, useConsent } from '@/lib/pixel'
 /**
  * The cookie question, asked once and remembered.
  *
- * "Accept Essential" is the refusal, worded as a choice, and it carries equal
- * weight beside "Accept All" — the ICO's position is that refusing should be
- * as easy as agreeing, so it must not be demoted to a link in the copy. Until one is chosen nothing
- * from Meta loads. The footer's "Cookie settings" clears the choice, which
- * brings this back.
+ * The Meta Pixel is already running when this appears (see lib/pixel.ts), so
+ * the copy says so. "Accept Essential" is the opt-out, worded as a choice, and
+ * it carries equal weight beside "Accept All" rather than being demoted to a
+ * link. The footer's "Cookie settings" clears the choice, which brings this
+ * back.
  */
 export function CookieBanner() {
   const consent = useConsent()
@@ -36,10 +36,10 @@ export function CookieBanner() {
         >
           <Container className="flex flex-col gap-5 py-6 md:flex-row md:items-center md:justify-between md:gap-10">
             <p className="max-w-2xl text-sm leading-relaxed text-bone/80">
-              We would like to use cookies from Meta to understand which of our
-              Instagram and Facebook adverts bring you here. They are only set if
-              you accept. Essential cookies that keep your bag and checkout working
-              are always on.
+              We use cookies from Meta to understand which of our Instagram and
+              Facebook adverts bring you here. Choose Accept Essential to turn them
+              off. Essential cookies that keep your bag and checkout working are
+              always on.
             </p>
             <div className="grid shrink-0 grid-cols-2 gap-3">
               <Button
@@ -63,15 +63,15 @@ export function CookieBanner() {
 
 /**
  * PageView, once per route. The pixel's own history tracking is switched off
- * in lib/pixel.ts, so this is the only thing sending it. Depending on consent
- * as well as the path means the page the visitor accepted on is counted too.
+ * in lib/pixel.ts, so this is the only thing sending it. It runs from the
+ * first page, and stops after an opt-out.
  */
 export function PixelPageViews() {
   const consent = useConsent()
   const { pathname } = useLocation()
 
   useEffect(() => {
-    if (consent !== 'granted' || pathname.startsWith('/admin')) return
+    if (consent === 'denied' || pathname.startsWith('/admin')) return
     track('PageView')
   }, [consent, pathname])
 
