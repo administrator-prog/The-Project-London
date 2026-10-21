@@ -14,6 +14,8 @@ import { SizeTable } from '@/components/ui/SizeTable'
 import { ProductCard } from '@/components/product/ProductCard'
 import { EASE_OUT_EXPO } from '@/lib/motion'
 import { useBag } from '@/lib/bag'
+import { track } from '@/lib/pixel'
+import type { Product as ProductData } from '@/types'
 
 export default function Product() {
   const { id } = useParams()
@@ -32,6 +34,13 @@ export default function Product() {
     const t = setTimeout(() => setJustAdded(false), 2400)
     return () => clearTimeout(t)
   }, [justAdded])
+
+  // Once per piece viewed. Products are static objects, so this re-runs only
+  // when the piece changes — moving on through "The Other Piece" is a second
+  // view, as it should be.
+  useEffect(() => {
+    if (product) track('ViewContent', pixelParams(product))
+  }, [product])
 
   if (!product) return <Navigate to="/shop" replace />
 
@@ -164,6 +173,10 @@ export default function Product() {
               onClick={() => {
                 if (!activeSize) return
                 add(product.id, activeSize)
+                track('AddToCart', {
+                  ...pixelParams(product),
+                  contents: [{ id: product.id, quantity: 1, item_price: product.price }],
+                })
                 setJustAdded(true)
               }}
             >
@@ -262,4 +275,15 @@ export default function Product() {
       )}
     </div>
   )
+}
+
+/** What Meta is told about a piece. Prices here are in pounds already. */
+function pixelParams(product: ProductData) {
+  return {
+    content_ids: [product.id],
+    content_name: product.name,
+    content_type: 'product' as const,
+    value: product.price,
+    currency: 'GBP',
+  }
 }

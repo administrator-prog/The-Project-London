@@ -3,6 +3,7 @@ import type { stripeClient } from './stripe'
 import type { serviceClient } from './supabase'
 import { confirmationEmail, sendEmail, studioEmail } from './email'
 import type { PlacedItem } from './commerce'
+import { sendPurchase } from './meta'
 
 /**
  * Turning a succeeded PaymentIntent into a fulfilled order.
@@ -91,6 +92,13 @@ export async function fulfil(
    */
   if (!result.order.customer_email_sent_at || !result.order.studio_email_sent_at) {
     await notify(supabase, result.order, result.items)
+  }
+
+  // Unlike the emails, decided by alreadyPaid: only the call that recorded the
+  // payment reports it, so the webhook and the confirmation page can never
+  // both send it. A lost send is covered by the browser's own Purchase.
+  if (!result.alreadyPaid) {
+    await sendPurchase(intent, result.order, result.items)
   }
 
   return result

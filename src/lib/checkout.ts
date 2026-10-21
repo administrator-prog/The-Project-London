@@ -1,4 +1,5 @@
 import type { BagItem } from './bag'
+import type { AdTracking } from './pixel'
 
 /**
  * The client half of checkout.
@@ -143,17 +144,21 @@ export interface PreparedPayment {
  *
  * The rate is sent by id. What it costs, and therefore what the card is
  * charged, is decided on the server.
+ *
+ * `tracking` carries the visitor's cookie choice, and with a yes the Meta
+ * cookies, so the server may send its own copy of Purchase once paid.
  */
 export async function preparePayment(
   clientToken: string,
   rateId: string,
   email: string,
+  tracking: AdTracking,
 ): Promise<Result<PreparedPayment>> {
   try {
     const response = await fetch('/api/pay', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clientToken, rateId, email }),
+      body: JSON.stringify({ clientToken, rateId, email, tracking }),
     })
 
     const body = (await response.json().catch(() => null)) as

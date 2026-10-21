@@ -17,6 +17,7 @@ import { getProduct } from '@/data/products'
 import { useBag } from '@/lib/bag'
 import { openCheckout, preparePayment, ZONE_COUNTRIES, ZONE_LABELS } from '@/lib/checkout'
 import type { OpenedCheckout, ShippingRate, ShippingZone } from '@/lib/checkout'
+import { adTracking, track } from '@/lib/pixel'
 import { cn, formatPence } from '@/lib/utils'
 
 /**
@@ -73,6 +74,22 @@ export default function Checkout() {
       }
       setOpened(result.data)
       setStripePromise(loadStripe(result.data.publishableKey))
+
+      // Sent from the server's priced order rather than the bag, so the value
+      // is what checkout will actually ask for, before delivery.
+      const { order } = result.data
+      track('InitiateCheckout', {
+        content_ids: order.items.map((i) => i.productId),
+        content_type: 'product',
+        contents: order.items.map((i) => ({
+          id: i.productId,
+          quantity: i.quantity,
+          item_price: i.unitPricePence / 100,
+        })),
+        num_items: order.items.reduce((n, i) => n + i.quantity, 0),
+        value: order.subtotalPence / 100,
+        currency: order.currency.toUpperCase(),
+      })
     })
   }, [items, zone, navigate])
 
@@ -227,7 +244,12 @@ function PaymentForm({
         return
       }
 
-      const prepared = await preparePayment(opened.order.clientToken, rateId, email.trim())
+      const prepared = await preparePayment(
+        opened.order.clientToken,
+        rateId,
+        email.trim(),
+        adTracking(),
+      )
       if (!prepared.ok) {
         setError(prepared.message)
         setBusy(false)

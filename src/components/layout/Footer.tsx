@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { footerColumns } from '@/data/navigation'
 import { Container } from '@/components/ui/Container'
+import { setConsent } from '@/lib/pixel'
 
 /**
  * The page closes on four short columns — a tracked heading over a stack of
@@ -44,6 +45,13 @@ export function Footer() {
 
         <div className="mt-14 flex flex-col gap-3 border-t border-line pt-7 label-sm text-ash sm:flex-row sm:items-center sm:justify-between md:mt-16">
           <span>© {new Date().getFullYear()} The Project London</span>
+          <button
+            type="button"
+            onClick={() => setConsent(null)}
+            className="text-left label-sm text-ash transition-colors duration-300 hover:text-ink"
+          >
+            Cookie settings
+          </button>
           <span>London, United Kingdom</span>
         </div>
       </Container>

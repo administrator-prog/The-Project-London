@@ -3,6 +3,7 @@ import { AnimatePresence } from 'framer-motion'
 import { Header } from './Header'
 import { Footer } from './Footer'
 import { ScrollToTop } from './ScrollToTop'
+import { CookieBanner, PixelPageViews } from './CookieBanner'
 import { PageTransition } from '@/components/ui/PageTransition'
 
 /** Routes whose top of page is a dark, full-bleed hero behind the nav. */
@@ -28,6 +29,8 @@ export function Layout() {
       </div>
 
       <Footer />
+      <CookieBanner />
+      <PixelPageViews />
     </div>
   )
 }

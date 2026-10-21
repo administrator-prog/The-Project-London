@@ -4,6 +4,7 @@ import { serviceClient } from '../lib/supabase'
 import { stripeClient } from '../lib/stripe'
 import { CHECKOUT_ENV, missingEnv } from '../lib/config'
 import { orderError } from '../lib/commerce'
+import { TRACKING_METADATA } from '../lib/meta'
 
 export const config = { runtime: 'edge' }
 
@@ -69,6 +70,7 @@ export default async function handler(request: Request) {
   let clientToken = ''
   let rateId = ''
   let email: string | null = null
+  let tracking: Record<string, string> = {}
 
   try {
     const body = (await request.json()) as Record<string, unknown>
@@ -78,6 +80,7 @@ export default async function handler(request: Request) {
       const trimmed = body.email.trim().slice(0, 254).toLowerCase()
       if (looksLikeEmail(trimmed)) email = trimmed
     }
+    tracking = readTracking(request, body?.tracking)
   } catch {
     return json({ ok: false, error: 'invalid', message: payMessage('') }, 400)
   }
@@ -148,6 +151,13 @@ export default async function handler(request: Request) {
       return json({ ok: false, error: 'link_failed', message: payMessage('') }, 500)
     }
 
+    // A separate call rather than part of the create above: the idempotency
+    // key there would refuse a retry whose cookie choice had changed. Not
+    // fatal — without it the order simply is not reported to Meta from here.
+    await stripe.paymentIntents
+      .update(intent.id, { metadata: tracking })
+      .catch((error) => console.error('Could not record ad tracking on the intent', error))
+
     return json(
       {
         ok: true,
@@ -162,5 +172,41 @@ export default async function handler(request: Request) {
   } catch (stripeError) {
     console.error('PaymentIntent creation failed', stripeError)
     return json({ ok: false, error: 'stripe', message: payMessage('') }, 502)
+  }
+}
+
+const FBP = /^fb\.\d\.\d{10,16}\.\d{1,24}$/
+const FBC = /^fb\.\d\.\d{10,16}\.[A-Za-z0-9_-]{1,400}$/
+
+/**
+ * What lib/meta.ts needs to report the purchase, as PaymentIntent metadata.
+ *
+ * Every key is always written — an empty string removes a metadata key on
+ * Stripe — so a customer who accepted and then declined before paying leaves
+ * nothing behind from the first attempt.
+ */
+function readTracking(request: Request, raw: unknown): Record<string, string> {
+  const value = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  const granted = value.consent === true
+  const pick = (v: unknown, pattern: RegExp) =>
+    granted && typeof v === 'string' && pattern.test(v) ? v : ''
+
+  const ip = granted
+    ? (request.headers.get('x-forwarded-for')?.split(',')[0] ?? request.headers.get('x-real-ip') ?? '')
+        .trim()
+        .slice(0, 64)
+    : ''
+  const origin = request.headers.get('origin')
+
+  return {
+    [TRACKING_METADATA.consent]: granted ? 'granted' : 'denied',
+    [TRACKING_METADATA.fbp]: pick(value.fbp, FBP),
+    [TRACKING_METADATA.fbc]: pick(value.fbc, FBC),
+    [TRACKING_METADATA.ip]: ip,
+    // Stripe caps a metadata value at 500 characters.
+    [TRACKING_METADATA.userAgent]: granted
+      ? (request.headers.get('user-agent') ?? '').slice(0, 500)
+      : '',
+    [TRACKING_METADATA.sourceUrl]: granted && origin ? `${origin}/order/confirmed` : '',
   }
 }
