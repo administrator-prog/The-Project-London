@@ -154,9 +154,13 @@ export default async function handler(request: Request) {
     // A separate call rather than part of the create above: the idempotency
     // key there would refuse a retry whose cookie choice had changed. Not
     // fatal — without it the order simply is not reported to Meta from here.
-    await stripe.paymentIntents
-      .update(intent.id, { metadata: tracking })
-      .catch((error) => console.error('Could not record ad tracking on the intent', error))
+    // Skipped entirely until the Conversions API is configured, since nothing
+    // would ever read it.
+    if (process.env.META_CAPI_ACCESS_TOKEN?.trim()) {
+      await stripe.paymentIntents
+        .update(intent.id, { metadata: tracking })
+        .catch((error) => console.error('Could not record ad tracking on the intent', error))
+    }
 
     return json(
       {
