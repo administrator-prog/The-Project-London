@@ -9,8 +9,9 @@ import { setConsent, track, useConsent } from '@/lib/pixel'
 /**
  * The cookie question, asked once and remembered.
  *
- * Accept and decline carry equal weight, side by side — the ICO's position is
- * that refusing should be as easy as agreeing. Until one is chosen nothing
+ * "Accept Essential" is the refusal, worded as a choice, and it carries equal
+ * weight beside "Accept All" — the ICO's position is that refusing should be
+ * as easy as agreeing, so it must not be demoted to a link in the copy. Until one is chosen nothing
  * from Meta loads. The footer's "Cookie settings" clears the choice, which
  * brings this back.
  */
@@ -47,10 +48,10 @@ export function CookieBanner() {
                 className="border-bone/30 text-bone hover:border-bone hover:bg-bone hover:text-ink"
                 onClick={() => setConsent('denied')}
               >
-                Decline
+                Accept Essential
               </Button>
               <Button variant="light" size="sm" onClick={() => setConsent('granted')}>
-                Accept
+                Accept All
               </Button>
             </div>
           </Container>
