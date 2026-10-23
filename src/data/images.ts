@@ -6,19 +6,18 @@
 const CDN = 'https://cdn.estateonline.ai/The%20Project%20London'
 
 /**
- * Bump when the logo files are replaced on the CDN. Browsers are told to keep
- * these for 30 days, so a phone that caught a half-uploaded file during a swap
- * would otherwise keep showing nothing; a new query string is a new file to
- * every browser. Also used by public/access.html and lib/email.ts — bump all
- * three together.
+ * The wordmarks are served from this site (public/brand), not the CDN. The
+ * CDN's image optimizer rewrites them per device — WebP or a resized PNG —
+ * without a Vary header, and phones were left showing a broken image. From
+ * here every device gets the same original PNG. public/access.html and
+ * lib/email.ts point at the same files; middleware.ts lets /brand/ past the
+ * password wall so the gate page can show it too.
  */
-const LOGO_VERSION = 'v=2'
-
 export const BRAND = {
   /** Black wordmark — used over light surfaces (scrolled nav, mobile menu). */
-  logoDark: `${CDN}/BLACK%20FONT%20(1).png?${LOGO_VERSION}`,
+  logoDark: '/brand/logo-black.png',
   /** White wordmark — used over the dark hero (pre-scroll nav, footer). */
-  logoLight: `${CDN}/WHITE%20FONT.png?${LOGO_VERSION}`,
+  logoLight: '/brand/logo-white.png',
 } as const
 
 export const MEDIA = {
@@ -53,7 +52,7 @@ export const HOME_HERO_MOBILE = shoot('The%20Florence%20Dress', 'PINK%20DRESS%20
 
 /**
  * Bunny Optimizer parameters. The Optimizer is on for the brand CDN (it serves
- * the logos as WebP); on the product pull zone these resize and re-compress at
+ * photography as WebP); on the product pull zone these resize and re-compress at
  * the edge once the add-on is enabled there, with no code change.
  */
 export const sized = (url: string, width: number, quality = 82) =>
