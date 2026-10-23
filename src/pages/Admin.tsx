@@ -32,6 +32,8 @@ interface AdminOrder {
   shipping_method: string | null
   shipping_address: Record<string, unknown> | null
   subtotal_pence: number
+  discount_pence?: number | null
+  discount_code?: string | null
   shipping_pence: number | null
   total_pence: number | null
   stock_shortfall: boolean
@@ -278,6 +280,9 @@ function OrderRow({ order, onShipped }: { order: AdminOrder; onShipped: () => vo
           {order.shipped_at && <span className="ml-3 text-sm text-ash">Shipped</span>}
           {order.stock_shortfall && <span className="ml-3 text-sm text-ink">Stock shortfall</span>}
           {order.zone_mismatch && <span className="ml-3 text-sm text-ink">Zone mismatch</span>}
+          {order.discount_code && (
+            <span className="ml-3 text-sm text-ash">{order.discount_code}</span>
+          )}
         </div>
         <span className="shrink-0 text-sm text-fog">
           {formatPence(order.total_pence ?? order.subtotal_pence, order.currency)}

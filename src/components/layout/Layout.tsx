@@ -4,6 +4,7 @@ import { Header } from './Header'
 import { Footer } from './Footer'
 import { ScrollToTop } from './ScrollToTop'
 import { CookieBanner, PixelPageViews } from './CookieBanner'
+import { WelcomeOffer } from './WelcomeOffer'
 import { PageTransition } from '@/components/ui/PageTransition'
 
 /** Routes whose top of page is a dark, full-bleed hero behind the nav. */
@@ -31,6 +32,7 @@ export function Layout() {
       <Footer />
       <CookieBanner />
       <PixelPageViews />
+      <WelcomeOffer />
     </div>
   )
 }

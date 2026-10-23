@@ -119,13 +119,20 @@ function load(): Fbq {
   document.head.appendChild(script)
 
   // Off: Meta's automatic events would report every button press as a
-  // SubscribedButtonClick, burying the five events this site sends on purpose.
+  // SubscribedButtonClick, burying the six events this site sends on purpose.
   fbq('set', 'autoConfig', false, META_PIXEL_ID)
   fbq('init', META_PIXEL_ID)
   return fbq
 }
 
-type StandardEvent = 'PageView' | 'ViewContent' | 'AddToCart' | 'InitiateCheckout' | 'Purchase'
+type StandardEvent =
+  | 'PageView'
+  | 'ViewContent'
+  | 'AddToCart'
+  | 'InitiateCheckout'
+  | 'Purchase'
+  // The welcome popup's signup — what an email-capture campaign optimises for.
+  | 'Lead'
 
 export interface EventParams {
   content_ids: string[]

@@ -48,6 +48,8 @@ function payMessage(code: string): string {
     case 'unknown_rate':
     case 'rate_wrong_zone':
       return 'That delivery option is not available. Please choose another.'
+    case 'discount_invalid':
+      return 'Your discount code has expired or has already been used. Please remove it to continue.'
     default:
       return 'We could not start the payment. Please try again in a moment.'
   }
@@ -108,6 +110,7 @@ export default async function handler(request: Request) {
     reference: string
     currency: string
     subtotalPence: number
+    discountPence?: number
     shippingPence: number
     totalPence: number
     shippingLabel: string
@@ -168,6 +171,7 @@ export default async function handler(request: Request) {
         clientSecret: intent.client_secret,
         reference: priced.reference,
         subtotalPence: priced.subtotalPence,
+        discountPence: priced.discountPence ?? 0,
         shippingPence: priced.shippingPence,
         totalPence: priced.totalPence,
       },
