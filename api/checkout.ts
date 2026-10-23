@@ -3,6 +3,7 @@ import { clientKey, createRateLimiter } from '../lib/rate-limit'
 import { serviceClient } from '../lib/supabase'
 import { CHECKOUT_ENV, missingEnv } from '../lib/config'
 import { checkoutMessage, isShippingZone, orderError, parseLines } from '../lib/commerce'
+import { offerEnabled } from '../lib/offer'
 import type { PlacedOrder, ShippingZone } from '../lib/commerce'
 
 export const config = { runtime: 'edge' }
@@ -109,6 +110,8 @@ export default async function handler(request: Request) {
     {
       ok: true,
       publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
+      // Whether to show the discount code field. See lib/offer.ts.
+      discounts: offerEnabled(),
       order: {
         clientToken: order.clientToken,
         reference: order.reference,

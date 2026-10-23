@@ -15,8 +15,15 @@ import { Button } from '@/components/ui/Button'
 import { sized } from '@/data/images'
 import { getProduct } from '@/data/products'
 import { useBag } from '@/lib/bag'
-import { openCheckout, preparePayment, ZONE_COUNTRIES, ZONE_LABELS } from '@/lib/checkout'
-import type { OpenedCheckout, ShippingRate, ShippingZone } from '@/lib/checkout'
+import {
+  applyDiscount,
+  openCheckout,
+  preparePayment,
+  ZONE_COUNTRIES,
+  ZONE_LABELS,
+} from '@/lib/checkout'
+import type { AppliedDiscount, OpenedCheckout, ShippingRate, ShippingZone } from '@/lib/checkout'
+import { forgetOfferCode, savedOfferCode } from '@/lib/offer'
 import { adTracking, track } from '@/lib/pixel'
 import { cn, formatPence } from '@/lib/utils'
 
@@ -113,9 +120,12 @@ function CheckoutForm({
   stripePromise: Promise<Stripe | null>
 }) {
   const [rateId, setRateId] = useState(opened.rates[0]?.id ?? '')
+  const [discount, setDiscount] = useState<AppliedDiscount | null>(null)
 
   const rate = opened.rates.find((r) => r.id === rateId) ?? opened.rates[0]
-  const total = opened.order.subtotalPence + (rate?.pricePence ?? 0)
+  // Display only, like the rest of this figure — /api/pay fixes the real one.
+  const total =
+    opened.order.subtotalPence - (discount?.discountPence ?? 0) + (rate?.pricePence ?? 0)
 
   const options: StripeElementsOptions = useMemo(
     () => ({
@@ -179,6 +189,8 @@ function CheckoutForm({
         zone={zone}
         rateId={rateId}
         onRateChange={setRateId}
+        discount={discount}
+        onDiscountChange={setDiscount}
         total={total}
       />
     </Elements>
@@ -192,12 +204,16 @@ function PaymentForm({
   zone,
   rateId,
   onRateChange,
+  discount,
+  onDiscountChange,
   total,
 }: {
   opened: OpenedCheckout
   zone: ShippingZone
   rateId: string
   onRateChange: (id: string) => void
+  discount: AppliedDiscount | null
+  onDiscountChange: (discount: AppliedDiscount | null) => void
   total: number
 }) {
   const stripe = useStripe()
@@ -373,8 +389,23 @@ function PaymentForm({
                 ))}
               </ul>
 
+              {opened.discounts && (
+                <DiscountField
+                  clientToken={opened.order.clientToken}
+                  discount={discount}
+                  onChange={onDiscountChange}
+                  disabled={busy}
+                />
+              )}
+
               <dl className="mt-6 space-y-3.5 border-t border-line pt-6">
                 <Row label="Subtotal" value={formatPence(subtotalPence, currency)} />
+                {discount && (
+                  <Row
+                    label={`Discount · ${discount.code}`}
+                    value={`−${formatPence(discount.discountPence, currency)}`}
+                  />
+                )}
                 <Row
                   label={rate?.label ?? 'Delivery'}
                   value={
@@ -419,6 +450,136 @@ function PaymentForm({
 }
 
 /* ------------------------------------------------------------------------ */
+
+/**
+ * The discount code, in the summary.
+ *
+ * Applying asks the server, which puts the code on the order and says what it
+ * is worth; the total here follows. A code that came in on the welcome email's
+ * link is tried once on arrival, and forgotten quietly if it no longer works.
+ *
+ * It sits inside the payment form, so Enter in this field applies the code
+ * rather than submitting the payment.
+ */
+function DiscountField({
+  clientToken,
+  discount,
+  onChange,
+  disabled,
+}: {
+  clientToken: string
+  discount: AppliedDiscount | null
+  onChange: (discount: AppliedDiscount | null) => void
+  disabled: boolean
+}) {
+  const [code, setCode] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const tried = useRef(false)
+
+  const apply = useCallback(
+    async (value: string, quiet = false) => {
+      setBusy(true)
+      setError(null)
+      const result = await applyDiscount(clientToken, value)
+      setBusy(false)
+
+      if (result.ok) {
+        onChange(result.data)
+        if (result.data) setCode('')
+        return
+      }
+      if (quiet) {
+        forgetOfferCode()
+        setCode('')
+      } else {
+        setError(result.message)
+      }
+    },
+    [clientToken, onChange],
+  )
+
+  useEffect(() => {
+    if (tried.current) return
+    tried.current = true
+    const saved = savedOfferCode()
+    if (saved) {
+      setCode(saved)
+      apply(saved, true)
+    }
+  }, [apply])
+
+  if (discount) {
+    return (
+      <div className="mt-6 flex items-baseline justify-between gap-4 border-t border-line pt-6">
+        <span className="text-sm text-fog">
+          {discount.code} · {discount.percentOff}% off
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            forgetOfferCode()
+            apply('')
+          }}
+          disabled={disabled || busy}
+          className="label-sm text-ash transition-colors hover:text-ink disabled:opacity-40"
+        >
+          <span className="link-underline">Remove</span>
+        </button>
+      </div>
+    )
+  }
+
+  const submit = () => {
+    if (code.trim() && !busy) apply(code)
+  }
+
+  return (
+    <div className="mt-6 border-t border-line pt-6">
+      <label htmlFor="discount-code" className="sr-only">
+        Discount code
+      </label>
+      <div className="flex gap-2">
+        <input
+          id="discount-code"
+          type="text"
+          autoComplete="off"
+          autoCapitalize="characters"
+          spellCheck={false}
+          placeholder="Discount code"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              submit()
+            }
+          }}
+          disabled={disabled}
+          aria-invalid={Boolean(error)}
+          className={cn(
+            'h-10 min-w-0 flex-1 border bg-paper px-3 text-sm uppercase text-ink outline-none transition-colors placeholder:normal-case placeholder:text-ash focus:border-ink',
+            error ? 'border-accent' : 'border-line',
+          )}
+        />
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-10"
+          onClick={submit}
+          disabled={disabled || busy || !code.trim()}
+        >
+          {busy ? 'Applying' : 'Apply'}
+        </Button>
+      </div>
+      {error && (
+        <p role="alert" className="mt-2 text-xs leading-relaxed text-accent">
+          {error}
+        </p>
+      )}
+    </div>
+  )
+}
 
 /**
  * The address element reports an absent line2 as null; confirmPayment's type

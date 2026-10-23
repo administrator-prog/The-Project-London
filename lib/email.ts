@@ -170,10 +170,19 @@ export interface ConfirmationArgs {
   currency: string
   items: PlacedItem[]
   subtotalPence: number
+  discountPence?: number | null
+  discountCode?: string | null
   shippingPence: number | null
   totalPence: number | null
   shippingMethod?: string | null
   shippingAddress?: Record<string, unknown> | null
+}
+
+/** The discount line, or nothing when there was no discount. */
+function discountRow(order: ConfirmationArgs): string {
+  if (!order.discountPence) return ''
+  const label = order.discountCode ? `Discount · ${escapeHtml(order.discountCode)}` : 'Discount'
+  return totalRow(label, `−${formatPence(order.discountPence, order.currency)}`)
 }
 
 /** The receipt. Quiet, like the rest of it — no marketing, no upsell. */
@@ -209,6 +218,7 @@ export function confirmationEmail(order: ConfirmationArgs): { subject: string; h
       <td style="padding-top:20px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
           ${totalRow('Subtotal', formatPence(order.subtotalPence, order.currency))}
+          ${discountRow(order)}
           ${totalRow(
             escapeHtml(order.shippingMethod || 'Shipping'),
             order.shippingPence === null
@@ -418,6 +428,7 @@ export function studioEmail(order: StudioArgs): { subject: string; html: string 
       <td style="padding-top:20px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
           ${totalRow('Subtotal', formatPence(order.subtotalPence, order.currency))}
+          ${discountRow(order)}
           ${totalRow(
             escapeHtml(order.shippingMethod || 'Shipping'),
             order.shippingPence === null
@@ -447,6 +458,71 @@ export function studioEmail(order: StudioArgs): { subject: string; html: string 
   return {
     subject: `New order ${order.reference} · ${formatPence(order.totalPence ?? order.subtotalPence, order.currency)}`,
     html: shell(`New order ${order.reference}.`, body),
+  }
+}
+
+export interface WelcomeArgs {
+  code: string
+  percentOff: number
+  expiresAt: string | null
+  shopUrl: string
+}
+
+/**
+ * The welcome code. The code is set large and on its own so it can be read
+ * off a phone and typed at checkout; the button carries it there anyway.
+ */
+export function welcomeEmail(args: WelcomeArgs): { subject: string; html: string } {
+  const expires = args.expiresAt
+    ? new Date(args.expiresAt).toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        timeZone: 'Europe/London',
+      })
+    : null
+
+  const body = `
+    <tr>
+      <td style="font-family:${SERIF};font-size:34px;line-height:1.2;color:${INK};padding-bottom:18px;">
+        ${args.percentOff}% off your first order
+      </td>
+    </tr>
+    <tr>
+      <td style="font-family:${SANS};font-size:14px;line-height:1.75;color:${FOG};padding-bottom:28px;">
+        Thank you for joining us. Enter the code below at checkout and
+        ${args.percentOff}% comes off your order.
+      </td>
+    </tr>
+    <tr>
+      <td align="center" style="padding:26px 16px;border:1px solid ${LINE};background:#ffffff;">
+        <div style="font-family:${SANS};font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:${ASH};padding-bottom:10px;">
+          Your code
+        </div>
+        <div style="font-family:${SERIF};font-size:30px;letter-spacing:0.08em;color:${INK};">
+          ${escapeHtml(args.code)}
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td align="center" style="padding-top:28px;">
+        <a href="${escapeHtml(args.shopUrl)}"
+          style="display:inline-block;background:${INK};color:#ffffff;font-family:${SANS};font-size:12px;letter-spacing:0.16em;text-transform:uppercase;text-decoration:none;padding:16px 34px;">
+          Shop the collection
+        </a>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding-top:32px;font-family:${SANS};font-size:12px;line-height:1.8;color:${ASH};">
+        One use per customer${expires ? `, valid until ${escapeHtml(expires)}` : ''}.
+        Applies to the pieces in your order, not delivery.
+        You are receiving this because you signed up at The Project London.
+      </td>
+    </tr>`
+
+  return {
+    subject: `Your ${args.percentOff}% welcome code — The Project London`,
+    html: shell(`Your code: ${args.code}`, body),
   }
 }
 

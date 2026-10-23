@@ -159,6 +159,12 @@ export default function OrderConfirmed() {
 
           <Reveal delay={0.35} className="mt-7 space-y-3.5">
             <Row label="Subtotal" value={formatPence(order.subtotalPence, order.currency)} />
+            {Boolean(order.discountPence) && (
+              <Row
+                label={order.discountCode ? `Discount · ${order.discountCode}` : 'Discount'}
+                value={`−${formatPence(order.discountPence ?? 0, order.currency)}`}
+              />
+            )}
             <Row
               label={order.shippingMethod ?? 'Shipping'}
               value={

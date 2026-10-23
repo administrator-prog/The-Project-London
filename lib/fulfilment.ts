@@ -25,6 +25,8 @@ export interface OrderRow {
   phone: string | null
   currency: string
   subtotal_pence: number
+  discount_pence: number | null
+  discount_code: string | null
   shipping_pence: number | null
   total_pence: number | null
   shipping_method: string | null
@@ -126,6 +128,8 @@ async function notify(
     currency: order.currency,
     items,
     subtotalPence: order.subtotal_pence,
+    discountPence: order.discount_pence,
+    discountCode: order.discount_code,
     shippingPence: order.shipping_pence,
     totalPence: order.total_pence,
     shippingMethod: order.shipping_method,

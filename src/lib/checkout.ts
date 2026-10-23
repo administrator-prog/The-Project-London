@@ -68,6 +68,8 @@ export interface ShippingRate {
 
 export interface OpenedCheckout {
   publishableKey: string
+  /** Whether the discount code field is offered. Absent from older servers. */
+  discounts?: boolean
   order: {
     clientToken: string
     reference: string
@@ -86,6 +88,8 @@ export interface OrderSummary {
   customerName: string | null
   currency: string
   subtotalPence: number
+  discountPence?: number | null
+  discountCode?: string | null
   shippingPence: number | null
   totalPence: number | null
   shippingMethod: string | null
@@ -171,6 +175,51 @@ export async function preparePayment(
     return { ok: false, message: body?.message || GENERIC_ERROR }
   } catch {
     return { ok: false, message: GENERIC_ERROR }
+  }
+}
+
+export interface AppliedDiscount {
+  code: string
+  percentOff: number
+  discountPence: number
+}
+
+/**
+ * Puts a discount code on the open order, or takes it off with an empty code.
+ * The server decides what it is worth and remembers it on the order; the
+ * figure that comes back is for the summary only.
+ */
+export async function applyDiscount(
+  clientToken: string,
+  code: string,
+): Promise<Result<AppliedDiscount | null>> {
+  const fallback = 'We could not apply that code. Please try again in a moment.'
+  try {
+    const response = await fetch('/api/discount', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clientToken, code }),
+    })
+
+    const body = (await response.json().catch(() => null)) as
+      | (Partial<AppliedDiscount> & { ok?: boolean; code?: string | null; message?: string })
+      | null
+
+    if (response.ok && body?.ok) {
+      return {
+        ok: true,
+        data: body.code
+          ? {
+              code: body.code,
+              percentOff: body.percentOff ?? 0,
+              discountPence: body.discountPence ?? 0,
+            }
+          : null,
+      }
+    }
+    return { ok: false, message: body?.message || fallback }
+  } catch {
+    return { ok: false, message: fallback }
   }
 }
 
