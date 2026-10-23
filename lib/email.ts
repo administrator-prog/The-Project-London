@@ -87,9 +87,9 @@ const SANS = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, s
  * domain would come back as a redirect to /access in every inbox. The CDN is
  * open, which is what makes it usable here.
  */
-const LOGO_SRC = 'https://cdn.estateonline.ai/The%20Project%20London/BLACK%20FONT%20(1).png'
+const LOGO_SRC = 'https://cdn.estateonline.ai/The%20Project%20London/BLACK%20FONT%20(1).png?v=2'
 
-/** Artwork is 8325 × 1819, so the wordmark keeps a 4.58:1 ratio. */
+/** Artwork is 1600 × 350, so the wordmark keeps a 4.57:1 ratio. */
 const LOGO_WIDTH = 220
 const LOGO_HEIGHT = 48
 

@@ -4,8 +4,8 @@ import { BRAND } from '@/data/images'
 
 /** Intrinsic pixel size of the wordmark artwork — declared so the browser
  *  reserves the right box before the image loads. */
-const LOGO_W = 8325
-const LOGO_H = 1819
+const LOGO_W = 1600
+const LOGO_H = 350
 
 interface LogoProps {
   className?: string

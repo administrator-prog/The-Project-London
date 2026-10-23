@@ -5,11 +5,20 @@
  */
 const CDN = 'https://cdn.estateonline.ai/The%20Project%20London'
 
+/**
+ * Bump when the logo files are replaced on the CDN. Browsers are told to keep
+ * these for 30 days, so a phone that caught a half-uploaded file during a swap
+ * would otherwise keep showing nothing; a new query string is a new file to
+ * every browser. Also used by public/access.html and lib/email.ts — bump all
+ * three together.
+ */
+const LOGO_VERSION = 'v=2'
+
 export const BRAND = {
   /** Black wordmark — used over light surfaces (scrolled nav, mobile menu). */
-  logoDark: `${CDN}/BLACK%20FONT%20(1).png`,
+  logoDark: `${CDN}/BLACK%20FONT%20(1).png?${LOGO_VERSION}`,
   /** White wordmark — used over the dark hero (pre-scroll nav, footer). */
-  logoLight: `${CDN}/WHITE%20FONT.png`,
+  logoLight: `${CDN}/WHITE%20FONT.png?${LOGO_VERSION}`,
 } as const
 
 export const MEDIA = {
@@ -43,10 +52,9 @@ const shoot = (folder: string, file: string) => `${SHOOT_CDN}/${folder}/${file}`
 export const HOME_HERO_MOBILE = shoot('The%20Florence%20Dress', 'PINK%20DRESS%201_404%20copy.jpg')
 
 /**
- * Bunny Optimizer parameters. Currently a no-op — the Optimizer add-on is not
- * enabled on the pull zone, so the origin JPEGs (2.5k wide, up to 2MB) are
- * served as-is. Turning the add-on on in the Bunny dashboard makes every call
- * below resize and re-compress at the edge, with no code change.
+ * Bunny Optimizer parameters. The Optimizer is on for the brand CDN (it serves
+ * the logos as WebP); on the product pull zone these resize and re-compress at
+ * the edge once the add-on is enabled there, with no code change.
  */
 export const sized = (url: string, width: number, quality = 82) =>
   `${url}?width=${width}&quality=${quality}`
