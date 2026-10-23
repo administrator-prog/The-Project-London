@@ -82,12 +82,12 @@ const SANS = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, s
  * is not on this side of the build. If BRAND.logoDark ever moves, move it here
  * too.
  *
- * It has to be an absolute URL on a host that answers without a cookie: the
- * site itself sits behind the password wall, so anything served from our own
- * domain would come back as a redirect to /access in every inbox. The CDN is
- * open, which is what makes it usable here.
+ * It has to be an absolute URL that answers without a cookie. /brand/ is
+ * exempt from the password wall in middleware.ts for exactly this reason, and
+ * it is served as the original PNG — not the CDN's per-device rewrite, which
+ * left phones showing a broken image.
  */
-const LOGO_SRC = 'https://cdn.estateonline.ai/The%20Project%20London/BLACK%20FONT%20(1).png?v=2'
+const LOGO_SRC = 'https://www.theprojectlondon.com/brand/logo-black.png'
 
 /** Artwork is 1600 × 350, so the wordmark keeps a 4.57:1 ratio. */
 const LOGO_WIDTH = 220

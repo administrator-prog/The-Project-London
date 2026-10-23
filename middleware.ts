@@ -27,9 +27,15 @@ const PUBLIC_PATHS = new Set([
   '/favicon.svg',
 ])
 
+/** The wordmarks. The gate page shows one, so they sit outside the wall. */
+const PUBLIC_PREFIXES = ['/brand/']
+
+const isPublic = (pathname: string) =>
+  PUBLIC_PATHS.has(pathname) || PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+
 export const config = {
   matcher: [
-    '/((?!api/verify-access|api/subscribe|api/stripe-webhook|access\\.html|favicon\\.svg).*)',
+    '/((?!api/verify-access|api/subscribe|api/stripe-webhook|access\\.html|favicon\\.svg|brand/).*)',
   ],
 }
 
@@ -94,13 +100,13 @@ export default async function middleware(request: Request) {
   // misconfigured deploy would silently publish the whole site.
   if (!secret) {
     console.error('WEBSITE_ACCESS is not set')
-    if (PUBLIC_PATHS.has(pathname)) return next()
+    if (isPublic(pathname)) return next()
     return new Response('Site unavailable', { status: 503 })
   }
 
   const authenticated = await verifyToken(readCookie(request, COOKIE_NAME), secret)
 
-  if (PUBLIC_PATHS.has(pathname)) {
+  if (isPublic(pathname)) {
     // Someone already through the gate has no reason to see it again.
     if (authenticated && (pathname === '/access' || pathname === '/access.html')) {
       return redirect('/')
