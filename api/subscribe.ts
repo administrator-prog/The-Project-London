@@ -1,5 +1,6 @@
 import { isSameOrigin } from '../lib/access'
 import { clientKey, createRateLimiter } from '../lib/rate-limit'
+import { serviceClient } from '../lib/supabase'
 
 export const config = { runtime: 'edge' }
 
@@ -16,6 +17,12 @@ export const config = { runtime: 'edge' }
  */
 const DEFAULT_WEBHOOK =
   'https://services.leadconnectorhq.com/hooks/QMxiKfnC5Ebsz9c8WzIe/webhook-trigger/eb09b982-87f9-4c60-ab61-1937132441dc'
+
+/**
+ * What the gate page's form says, recorded as the consent behind each signup.
+ * Change it if the form's wording changes.
+ */
+const LAUNCH_LIST_CONSENT = 'Joined the launch list on the access page ("Notify me").'
 
 const limiter = createRateLimiter({ max: 5, windowMs: 10 * 60 * 1000 })
 
@@ -106,6 +113,11 @@ export default async function handler(request: Request) {
     return json({ ok: true }, 200)
   }
 
+  // Kept in our own contacts table as well as the CRM, so the list survives a
+  // change of CRM. Best effort, in parallel: the CRM stays the thing this
+  // route answers for, and a database hiccup must not lose a signup there.
+  const saved = saveContact(name, email)
+
   // Split for CRMs that expect discrete name fields; `name` is sent as well so
   // the workflow can map whichever it prefers.
   const [firstName, ...rest] = name.split(/\s+/)
@@ -127,12 +139,31 @@ export default async function handler(request: Request) {
 
     if (!response.ok) {
       console.error('LeadConnector webhook rejected the signup', response.status)
+      await saved
       return json({ ok: false, error: 'upstream' }, 502)
     }
   } catch (error) {
     console.error('LeadConnector webhook unreachable', error)
+    await saved
     return json({ ok: false, error: 'upstream' }, 502)
   }
 
+  await saved
   return json({ ok: true }, 200)
+}
+
+/** Writes the signup to `contacts`. Never throws. */
+async function saveContact(name: string, email: string) {
+  if (!process.env.SUPABASE_URL?.trim() || !process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) return
+  try {
+    const { error } = await serviceClient().rpc('record_contact', {
+      p_email: email,
+      p_source: 'launch_list',
+      p_name: name,
+      p_consent_text: LAUNCH_LIST_CONSENT,
+    })
+    if (error) console.error('Could not save the signup to contacts', error.message)
+  } catch (error) {
+    console.error('Could not save the signup to contacts', error)
+  }
 }
