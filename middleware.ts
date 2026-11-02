@@ -24,6 +24,8 @@ const PUBLIC_PATHS = new Set([
   // would answer every delivery with a 307 to /access, and no order would ever
   // be marked paid. Its own signature check is the authentication.
   '/api/stripe-webhook',
+  // Vercel's daily cron, which has no cookie. CRON_SECRET is its authentication.
+  '/api/keepalive',
   '/favicon.svg',
 ])
 
@@ -35,7 +37,7 @@ const isPublic = (pathname: string) =>
 
 export const config = {
   matcher: [
-    '/((?!api/verify-access|api/subscribe|api/stripe-webhook|access\\.html|favicon\\.svg|brand/).*)',
+    '/((?!api/verify-access|api/subscribe|api/stripe-webhook|api/keepalive|access\\.html|favicon\\.svg|brand/).*)',
   ],
 }
 
