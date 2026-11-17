@@ -1,4 +1,5 @@
-import { Outlet, useLocation } from 'react-router-dom'
+import { useState } from 'react'
+import { useLocation, useOutlet } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import { Header } from './Header'
 import { Footer } from './Footer'
@@ -24,7 +25,7 @@ export function Layout() {
         {!heroMode && <div aria-hidden className="h-20" />}
         <AnimatePresence mode="wait">
           <PageTransition key={location.pathname}>
-            <Outlet />
+            <FrozenOutlet />
           </PageTransition>
         </AnimatePresence>
       </div>
@@ -35,4 +36,20 @@ export function Layout() {
       <WelcomeOffer />
     </div>
   )
+}
+
+/**
+ * The page as it was when this transition mounted.
+ *
+ * A plain <Outlet /> inside AnimatePresence renders the *new* route in the
+ * page that is fading out, so every navigation mounted the incoming page
+ * twice: once in the exiting wrapper, once in the entering one. Checkout
+ * opened two orders and sent InitiateCheckout twice; product pages sent
+ * ViewContent twice. Holding on to the element captured at mount keeps the
+ * exiting page showing what it showed, and the new one mounts once.
+ */
+function FrozenOutlet() {
+  const outlet = useOutlet()
+  const [frozen] = useState(outlet)
+  return frozen
 }

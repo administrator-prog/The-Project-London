@@ -1,5 +1,6 @@
 import type { BagItem } from './bag'
 import type { AdTracking } from './pixel'
+import type { Attribution } from './attribution'
 
 /**
  * The client half of checkout.
@@ -151,18 +152,21 @@ export interface PreparedPayment {
  *
  * `tracking` carries the visitor's cookie choice, and with a yes the Meta
  * cookies, so the server may send its own copy of Purchase once paid.
+ * `attribution` is the advert or link that brought the visitor in, saved
+ * with the order (see lib/attribution.ts).
  */
 export async function preparePayment(
   clientToken: string,
   rateId: string,
   email: string,
   tracking: AdTracking,
+  attribution: Attribution | null,
 ): Promise<Result<PreparedPayment>> {
   try {
     const response = await fetch('/api/pay', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clientToken, rateId, email, tracking }),
+      body: JSON.stringify({ clientToken, rateId, email, tracking, attribution }),
     })
 
     const body = (await response.json().catch(() => null)) as

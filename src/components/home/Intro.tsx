@@ -3,15 +3,19 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BRAND } from '@/data/images'
 import { EASE_OUT_EXPO } from '@/lib/motion'
+import { landedFromAd } from '@/lib/attribution'
 
 /**
  * A one-time entrance. The wordmark settles, a hairline draws across, then the
  * panel lifts like a curtain to reveal the film. Plays once per session so it
- * stays a moment, never a chore.
+ * stays a moment, never a chore. Skipped for anyone who arrived from an
+ * advert: they came for a dress, not a two-second wait.
  */
 export function Intro() {
   const [done, setDone] = useState(
-    () => typeof window !== 'undefined' && sessionStorage.getItem('tpl-intro') === 'seen',
+    () =>
+      typeof window !== 'undefined' &&
+      (landedFromAd || sessionStorage.getItem('tpl-intro') === 'seen'),
   )
 
   useEffect(() => {

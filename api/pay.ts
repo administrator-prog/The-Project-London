@@ -73,6 +73,7 @@ export default async function handler(request: Request) {
   let rateId = ''
   let email: string | null = null
   let tracking: Record<string, string> = {}
+  let attribution: Record<string, string | boolean> | null = null
 
   try {
     const body = (await request.json()) as Record<string, unknown>
@@ -83,6 +84,7 @@ export default async function handler(request: Request) {
       if (looksLikeEmail(trimmed)) email = trimmed
     }
     tracking = readTracking(request, body?.tracking)
+    attribution = readAttribution(body?.attribution)
   } catch {
     return json({ ok: false, error: 'invalid', message: payMessage('') }, 400)
   }
@@ -157,12 +159,29 @@ export default async function handler(request: Request) {
     // A separate call rather than part of the create above: the idempotency
     // key there would refuse a retry whose cookie choice had changed. Not
     // fatal — without it the order simply is not reported to Meta from here.
-    // Skipped entirely until the Conversions API is configured, since nothing
-    // would ever read it.
-    if (process.env.META_CAPI_ACCESS_TOKEN?.trim()) {
+    // The Meta details are skipped until the Conversions API is configured,
+    // since nothing would ever read them; the campaign tags are always kept,
+    // so they can be read in Stripe as well as in the order book.
+    const metadata = {
+      ...(process.env.META_CAPI_ACCESS_TOKEN?.trim() ? tracking : {}),
+      ...attributionMetadata(attribution),
+    }
+    if (Object.keys(metadata).length > 0) {
       await stripe.paymentIntents
-        .update(intent.id, { metadata: tracking })
+        .update(intent.id, { metadata })
         .catch((error) => console.error('Could not record ad tracking on the intent', error))
+    }
+
+    // Which advert or link brought the order in. Written while the order is
+    // still pending, so a later attempt with fresher tags replaces it. Not
+    // fatal: an unattributed order is still an order.
+    const { error: attributionError } = await supabase
+      .from('orders')
+      .update({ attribution })
+      .eq('client_token', clientToken)
+      .eq('status', 'pending')
+    if (attributionError) {
+      console.error('Could not record attribution on the order', attributionError.message)
     }
 
     return json(
@@ -217,4 +236,46 @@ function readTracking(request: Request, raw: unknown): Record<string, string> {
       : '',
     [TRACKING_METADATA.sourceUrl]: granted && origin ? `${origin}/order/confirmed` : '',
   }
+}
+
+const ATTRIBUTION_TEXT = [
+  'utm_source',
+  'utm_medium',
+  'utm_campaign',
+  'utm_content',
+  'utm_term',
+  'landing_path',
+  'referrer',
+  'captured_at',
+] as const
+
+/**
+ * The campaign tags from src/lib/attribution.ts, reduced to known keys and
+ * short strings. Anything else is dropped: this is free text from a URL.
+ */
+function readAttribution(raw: unknown): Record<string, string | boolean> | null {
+  if (!raw || typeof raw !== 'object') return null
+  const value = raw as Record<string, unknown>
+  const out: Record<string, string | boolean> = {}
+  for (const key of ATTRIBUTION_TEXT) {
+    const field = value[key]
+    if (typeof field === 'string' && field.trim()) out[key] = field.trim().slice(0, 150)
+  }
+  if (value.fbclid === true) out.fbclid = true
+  return Object.keys(out).some((key) => key !== 'captured_at') ? out : null
+}
+
+/**
+ * The same tags as PaymentIntent metadata. Every key is always written, as
+ * in readTracking, so an earlier attempt's tags never outlive a later one.
+ */
+function attributionMetadata(
+  attribution: Record<string, string | boolean> | null,
+): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const key of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content'] as const) {
+    const value = attribution?.[key]
+    out[key] = typeof value === 'string' ? value : ''
+  }
+  return out
 }

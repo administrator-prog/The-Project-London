@@ -6,7 +6,7 @@ import { Reveal, TextReveal } from '@/components/ui/Reveal'
 import { useBag } from '@/lib/bag'
 import { fetchOrder } from '@/lib/checkout'
 import type { OrderSummary } from '@/lib/checkout'
-import { trackPurchase } from '@/lib/pixel'
+import { identify, trackPurchase } from '@/lib/pixel'
 import { formatPence } from '@/lib/utils'
 
 /**
@@ -64,8 +64,9 @@ export default function OrderConfirmed() {
             // Only ever for money that has arrived — a pending, failed or
             // cancelled payment never reaches this branch. trackPurchase
             // also refuses a reference it has already sent, so a refresh
-            // here does not count the order twice.
-            trackPurchase(result.reference, {
+            // here does not count the order twice. The email goes to the
+            // pixel first, so Purchase carries it for matching.
+            void identify(result.email).then(() => trackPurchase(result.reference, {
               content_ids: result.items.map((i) => i.productId),
               content_type: 'product',
               contents: result.items.map((i) => ({
@@ -76,7 +77,7 @@ export default function OrderConfirmed() {
               num_items: result.items.reduce((n, i) => n + i.quantity, 0),
               value: (result.totalPence ?? result.subtotalPence) / 100,
               currency: result.currency.toUpperCase(),
-            })
+            }))
           }
           return
         }

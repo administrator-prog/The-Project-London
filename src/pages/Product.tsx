@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useParams, Link, Navigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -14,7 +14,8 @@ import { SizeTable } from '@/components/ui/SizeTable'
 import { ProductCard } from '@/components/product/ProductCard'
 import { EASE_OUT_EXPO } from '@/lib/motion'
 import { useBag } from '@/lib/bag'
-import { track } from '@/lib/pixel'
+import { track, useConsent } from '@/lib/pixel'
+import { readInset, usePublishedInset } from '@/lib/insets'
 import type { Product as ProductData } from '@/types'
 
 export default function Product() {
@@ -26,6 +27,45 @@ export default function Product() {
   const [openAccordion, setOpenAccordion] = useState<string | null>('Size & Fit')
   const [justAdded, setJustAdded] = useState(false)
   const { add } = useBag()
+  const consent = useConsent()
+
+  const sizesRef = useRef<HTMLDivElement>(null)
+  const actionRef = useRef<HTMLDivElement>(null)
+  const stickyRef = useRef<HTMLDivElement>(null)
+  const [actionInView, setActionInView] = useState(true)
+
+  // The main Add to Bag button sits below the gallery, the details and the
+  // sizes, so on a phone it is off screen more often than not. Watch it, and
+  // offer the sticky bar whenever it cannot be seen. The cookie banner covers
+  // the bottom of the screen while it is open, so that strip does not count
+  // as visible.
+  useEffect(() => {
+    const element = actionRef.current
+    if (!element) return
+    const observer = new IntersectionObserver(
+      ([entry]) => setActionInView(entry.isIntersecting),
+      { rootMargin: `-80px 0px -${readInset('--inset-cookie')}px 0px` },
+    )
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [consent, id])
+
+  const showSticky = Boolean(product && !product.soldOut && !actionInView)
+  usePublishedInset('--inset-cta', stickyRef, showSticky, consent)
+
+  const addToBag = useCallback(() => {
+    if (!product || !activeSize) return
+    add(product.id, activeSize)
+    track('AddToCart', {
+      ...pixelParams(product),
+      contents: [{ id: product.id, quantity: 1, item_price: product.price }],
+    })
+    setJustAdded(true)
+  }, [product, activeSize, add])
+
+  const chooseSize = () => {
+    sizesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
 
   // The confirmation is a moment, not a state — it clears itself, and clears
   // on unmount so a quick navigation cannot set state on a gone component.
@@ -138,7 +178,7 @@ export default function Product() {
             </ul>
 
             {/* Sizes */}
-            <div className="mt-9">
+            <div ref={sizesRef} className="mt-9 scroll-mt-24">
               <div className="flex items-baseline justify-between gap-4">
                 <span className="label-sm text-ink">Size</span>
                 <Link to="/size-guide" className="text-sm text-ash link-underline hover:text-ink">
@@ -165,29 +205,23 @@ export default function Product() {
             </div>
 
             {/* Action */}
-            <Button
-              variant="solid"
-              size="lg"
-              className="mt-8 h-14 w-full"
-              disabled={product.soldOut || !activeSize}
-              onClick={() => {
-                if (!activeSize) return
-                add(product.id, activeSize)
-                track('AddToCart', {
-                  ...pixelParams(product),
-                  contents: [{ id: product.id, quantity: 1, item_price: product.price }],
-                })
-                setJustAdded(true)
-              }}
-            >
-              {product.soldOut
-                ? 'Sold Out'
-                : !activeSize
-                  ? 'Select a Size'
-                  : justAdded
-                    ? 'Added to Bag'
-                    : 'Add to Bag'}
-            </Button>
+            <div ref={actionRef}>
+              <Button
+                variant="solid"
+                size="lg"
+                className="mt-8 h-14 w-full"
+                disabled={product.soldOut || !activeSize}
+                onClick={addToBag}
+              >
+                {product.soldOut
+                  ? 'Sold Out'
+                  : !activeSize
+                    ? 'Select a Size'
+                    : justAdded
+                      ? 'Added to Bag'
+                      : 'Add to Bag'}
+              </Button>
+            </div>
 
             <AnimatePresence>
               {justAdded && (
@@ -256,6 +290,45 @@ export default function Product() {
           </div>
         </div>
       </Container>
+
+      {/* Sticky Add to Bag, phones and tablets only, whenever the main
+          button is out of sight. It sits above the cookie banner, never
+          under it, and publishes its own height so the welcome offer's bar
+          can sit above it in turn. */}
+      <AnimatePresence>
+        {showSticky && (
+          <motion.div
+            ref={stickyRef}
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ duration: 0.4, ease: EASE_OUT_EXPO }}
+            style={{ bottom: 'var(--inset-cookie, 0px)' }}
+            className="fixed inset-x-0 z-40 border-t border-line bg-paper lg:hidden"
+          >
+            <Container className="flex items-center gap-4 py-3">
+              <div className="min-w-0 flex-1">
+                <span className="block truncate font-serif text-[0.95rem] leading-tight text-ink">
+                  {product.name}
+                </span>
+                <span className="mt-0.5 block text-xs text-fog">
+                  {formatPrice(product.price)}
+                  {activeSize ? ` · Size ${activeSize}` : ''}
+                </span>
+              </div>
+              {activeSize ? (
+                <Button variant="solid" size="md" className="shrink-0 px-6" onClick={addToBag}>
+                  {justAdded ? 'Added' : 'Add to Bag'}
+                </Button>
+              ) : (
+                <Button variant="solid" size="md" className="shrink-0 px-6" onClick={chooseSize}>
+                  Select a Size
+                </Button>
+              )}
+            </Container>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* The other piece */}
       {other && (

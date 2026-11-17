@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { loadStripe } from '@stripe/stripe-js'
-import type { Stripe, StripeElementsOptions, StripeAddressElementChangeEvent } from '@stripe/stripe-js'
+import type {
+  Stripe,
+  StripeElementsOptions,
+  StripeAddressElementChangeEvent,
+  StripeExpressCheckoutElementConfirmEvent,
+} from '@stripe/stripe-js'
 import {
   AddressElement,
   Elements,
+  ExpressCheckoutElement,
   PaymentElement,
   useElements,
   useStripe,
@@ -24,7 +30,8 @@ import {
 } from '@/lib/checkout'
 import type { AppliedDiscount, OpenedCheckout, ShippingRate, ShippingZone } from '@/lib/checkout'
 import { forgetOfferCode, savedOfferCode } from '@/lib/offer'
-import { adTracking, track } from '@/lib/pixel'
+import { adTracking, identify, track } from '@/lib/pixel'
+import { savedAttribution } from '@/lib/attribution'
 import { cn, formatPence } from '@/lib/utils'
 
 /**
@@ -265,6 +272,7 @@ function PaymentForm({
         rateId,
         email.trim(),
         adTracking(),
+        savedAttribution(),
       )
       if (!prepared.ok) {
         setError(prepared.message)
@@ -313,6 +321,14 @@ function PaymentForm({
           className="grid gap-14 lg:grid-cols-[1fr_21rem] lg:items-start lg:gap-16"
         >
           <div className="min-w-0">
+            <ExpressCheckout
+              opened={opened}
+              zone={zone}
+              discountPence={discount?.discountPence ?? 0}
+              onRateChange={onRateChange}
+              onError={setError}
+            />
+
             <Fieldset legend="Contact">
               <label htmlFor="email" className="sr-only">
                 Email address
@@ -325,7 +341,12 @@ function PaymentForm({
                 placeholder="Email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                onBlur={() => setEmailTouched(true)}
+                onBlur={() => {
+                  setEmailTouched(true)
+                  // Advanced matching: the hashed address rides on every
+                  // pixel event from here on, Purchase included.
+                  void identify(email)
+                }}
                 aria-invalid={emailTouched && !emailValid}
                 className={cn(
                   'h-[46px] w-full border bg-paper px-3.5 text-[0.95rem] text-ink outline-none transition-colors placeholder:text-ash focus:border-ink',
@@ -370,7 +391,11 @@ function PaymentForm({
             </Fieldset>
 
             <Fieldset legend="Payment" className="mt-12">
-              <PaymentElement options={{ layout: 'tabs' }} />
+              {/* The wallets are the express buttons above; listing them here
+                  too would offer Apple Pay twice. */}
+              <PaymentElement
+                options={{ layout: 'tabs', wallets: { applePay: 'never', googlePay: 'never' } }}
+              />
               <p className="mt-3 text-xs leading-relaxed text-ash">
                 Your card details are sent directly to Stripe over an encrypted
                 connection. They never reach our servers.
@@ -445,6 +470,147 @@ function PaymentForm({
           </aside>
         </form>
       </Container>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------------ */
+
+/**
+ * Apple Pay, Google Pay and any other wallet Stripe offers, above the form.
+ *
+ * The wallet sheet collects the email, phone, delivery address and delivery
+ * option itself, so a customer on a phone can pay with a fingerprint instead
+ * of typing six fields. Shown only when the device has a wallet to offer;
+ * otherwise it takes no space at all.
+ *
+ * The money rules are the same as the card form's: the sheet's total is for
+ * display, and the charge is fixed by /api/pay from the order and the id of
+ * the delivery option picked in the sheet. Only countries in this order's
+ * zone are offered, so an international address cannot take the UK rate.
+ */
+function ExpressCheckout({
+  opened,
+  zone,
+  discountPence,
+  onRateChange,
+  onError,
+}: {
+  opened: OpenedCheckout
+  zone: ShippingZone
+  discountPence: number
+  onRateChange: (id: string) => void
+  onError: (message: string | null) => void
+}) {
+  const stripe = useStripe()
+  const elements = useElements()
+  const navigate = useNavigate()
+  const [available, setAvailable] = useState(false)
+
+  const totalFor = (rateId: string | undefined) => {
+    const rate = opened.rates.find((r) => r.id === rateId) ?? opened.rates[0]
+    return opened.order.subtotalPence - discountPence + (rate?.pricePence ?? 0)
+  }
+
+  const confirm = async (event: StripeExpressCheckoutElementConfirmEvent) => {
+    if (!stripe || !elements) {
+      event.paymentFailed({ reason: 'fail' })
+      return
+    }
+    onError(null)
+
+    const email = event.billingDetails?.email?.trim() ?? ''
+    const rateId = event.shippingRate?.id ?? opened.rates[0]?.id ?? ''
+    void identify(email)
+
+    const { error: submitError } = await elements.submit()
+    if (submitError) {
+      event.paymentFailed({ reason: 'fail' })
+      onError(submitError.message ?? 'Your payment could not be completed.')
+      return
+    }
+
+    const prepared = await preparePayment(
+      opened.order.clientToken,
+      rateId,
+      email,
+      adTracking(),
+      savedAttribution(),
+    )
+    if (!prepared.ok) {
+      event.paymentFailed({ reason: 'fail', message: prepared.message })
+      onError(prepared.message)
+      return
+    }
+
+    const address = event.shippingAddress
+    const phone = event.billingDetails?.phone
+    const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      clientSecret: prepared.data.clientSecret,
+      confirmParams: {
+        return_url: `${window.location.origin}/order/confirmed`,
+        ...(email ? { receipt_email: email } : {}),
+        ...(address
+          ? {
+              shipping: {
+                name: address.name,
+                ...(phone ? { phone } : {}),
+                address: {
+                  line1: address.address.line1,
+                  ...(address.address.line2 ? { line2: address.address.line2 } : {}),
+                  city: address.address.city,
+                  state: address.address.state,
+                  postal_code: address.address.postal_code,
+                  country: address.address.country,
+                },
+              },
+            }
+          : {}),
+      },
+      redirect: 'if_required',
+    })
+
+    if (confirmError) {
+      onError(confirmError.message ?? 'Your payment could not be completed.')
+      return
+    }
+    if (paymentIntent?.id) {
+      navigate(`/order/confirmed?payment_intent=${paymentIntent.id}`, { replace: true })
+    }
+  }
+
+  return (
+    <div className={available ? 'mb-12' : 'hidden'}>
+      <p className="label-sm mb-5 text-ash">Express Checkout</p>
+      <ExpressCheckoutElement
+        options={{
+          buttonType: { applePay: 'buy', googlePay: 'buy' },
+          buttonTheme: { applePay: 'black', googlePay: 'black' },
+          buttonHeight: 48,
+          emailRequired: true,
+          phoneNumberRequired: true,
+          shippingAddressRequired: true,
+          allowedShippingCountries: ZONE_COUNTRIES[zone],
+          shippingRates: opened.rates.map((rate) => ({
+            id: rate.id,
+            displayName: rate.label,
+            amount: rate.pricePence,
+          })),
+        }}
+        onReady={({ availablePaymentMethods }) => setAvailable(Boolean(availablePaymentMethods))}
+        onShippingRateChange={(event) => {
+          onRateChange(event.shippingRate.id)
+          elements?.update({ amount: totalFor(event.shippingRate.id) })
+          event.resolve()
+        }}
+        onConfirm={confirm}
+      />
+      <div className="mt-8 flex items-center gap-4">
+        <span className="h-px flex-1 bg-line" />
+        <span className="label-sm text-ash">Or pay by card</span>
+        <span className="h-px flex-1 bg-line" />
+      </div>
     </div>
   )
 }

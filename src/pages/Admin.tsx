@@ -45,6 +45,8 @@ interface AdminOrder {
   tracking_url: string | null
   shipped_email_sent_at: string | null
   created_at: string
+  /** The advert or link that brought the order in. See src/lib/attribution.ts. */
+  attribution?: Record<string, string | boolean> | null
   items: AdminItem[]
 }
 
@@ -303,6 +305,7 @@ function OrderRow({ order, onShipped }: { order: AdminOrder; onShipped: () => vo
           .join(', ')}
         {order.email && <div className="mt-1">{order.email}</div>}
         {order.shipping_method && <div className="mt-1">{order.shipping_method}</div>}
+        {source(order.attribution) && <div className="mt-1">Source: {source(order.attribution)}</div>}
       </div>
 
       {order.shipped_at ? (
@@ -353,4 +356,20 @@ function OrderRow({ order, onShipped }: { order: AdminOrder; onShipped: () => vo
       {error && <p className="mt-3 text-sm text-ink">{error}</p>}
     </div>
   )
+}
+
+/** "facebook / paid_social · campaign · ad", from whichever tags the order carries. */
+function source(attribution: AdminOrder['attribution']): string | null {
+  if (!attribution) return null
+  const text = (key: string) => {
+    const value = attribution[key]
+    return typeof value === 'string' && value ? value : null
+  }
+  const channel = [text('utm_source'), text('utm_medium')].filter(Boolean).join(' / ')
+  const parts = [
+    channel || (attribution.fbclid ? 'Meta ad click' : null),
+    text('utm_campaign'),
+    text('utm_content'),
+  ].filter(Boolean)
+  return parts.length ? parts.join(' · ') : null
 }
