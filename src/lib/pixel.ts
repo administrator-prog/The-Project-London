@@ -4,7 +4,7 @@ import { useSyncExternalStore } from 'react'
  * The Meta Pixel, on unless the visitor opts out.
  *
  * It loads on the first page, before the cookie banner is answered, so the
- * landing page and an ad's fbclid are captured. "Accept Essential" turns it
+ * landing page and an ad's fbclid are captured. "Essential Only" turns it
  * off and takes back its cookies. This is opt-out, not the opt-in consent
  * PECR asks of advertising cookies — a deliberate choice, made knowingly.
  * Every call into here is safe to make regardless — after an opt-out it
@@ -18,6 +18,7 @@ export const META_PIXEL_ID = '1611370797407799'
 
 const CONSENT_KEY = 'tpl.consent.v1'
 const PURCHASED_KEY = 'tpl.pixel.purchased.v1'
+const MATCH_KEY = 'tpl.pixel.match.v1'
 
 export type Consent = 'granted' | 'denied'
 
@@ -65,6 +66,11 @@ export function setConsent(value: Consent | null) {
     // Already loaded: tell it to stop, and take back the
     // cookies it set, rather than wait for the next page load.
     window.fbq?.('consent', 'revoke')
+    try {
+      localStorage.removeItem(MATCH_KEY)
+    } catch {
+      /* Nothing stored. */
+    }
     for (const name of ['_fbp', '_fbc']) {
       document.cookie = `${name}=; Max-Age=0; Path=/; Domain=${location.hostname}`
       document.cookie = `${name}=; Max-Age=0; Path=/`
@@ -121,7 +127,9 @@ function load(): Fbq {
   // Off: Meta's automatic events would report every button press as a
   // SubscribedButtonClick, burying the six events this site sends on purpose.
   fbq('set', 'autoConfig', false, META_PIXEL_ID)
-  fbq('init', META_PIXEL_ID)
+  const match = storedMatch()
+  if (match) fbq('init', META_PIXEL_ID, match)
+  else fbq('init', META_PIXEL_ID)
   return fbq
 }
 
@@ -142,6 +150,57 @@ export interface EventParams {
   num_items?: number
   value: number
   currency: string
+}
+
+/* ---- Advanced matching ------------------------------------------------- */
+
+/**
+ * The visitor's email, hashed, for Meta's advanced matching.
+ *
+ * Once someone gives an address (the welcome popup, the checkout email field,
+ * the confirmation page), every later event from this browser carries its
+ * SHA-256, which lets Meta tie the visit to an account and lifts the event
+ * match quality. Only the hash is kept, never the address, and an opt-out
+ * deletes it along with the cookies.
+ */
+type Match = { em: string }
+
+function storedMatch(): Match | null {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(MATCH_KEY) ?? 'null') as Match | null
+    return parsed && /^[0-9a-f]{64}$/.test(parsed.em) ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+async function sha256(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+/**
+ * Hands Meta the hashed email for this browser. Safe to call often: it does
+ * nothing after an opt-out, for an invalid address, or for the address it
+ * already has. Never throws.
+ */
+export async function identify(email: string | null | undefined): Promise<void> {
+  try {
+    const normalised = email?.trim().toLowerCase() ?? ''
+    if (!allowed() || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normalised)) return
+    const em = await sha256(normalised)
+    if (storedMatch()?.em === em) return
+    try {
+      localStorage.setItem(MATCH_KEY, JSON.stringify({ em }))
+    } catch {
+      /* Matched for this page load only. */
+    }
+    // Re-initialising with user data updates the pixel already running;
+    // it is keyed by id, so no event is sent twice.
+    if (window.fbq) window.fbq('init', META_PIXEL_ID, { em })
+  } catch {
+    /* No matching is the right failure. */
+  }
 }
 
 /** Whether the pixel may run: always, until the visitor opts out. */

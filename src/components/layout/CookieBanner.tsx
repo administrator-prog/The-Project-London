@@ -1,31 +1,42 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Container } from '@/components/ui/Container'
 import { Button } from '@/components/ui/Button'
 import { EASE_OUT_EXPO } from '@/lib/motion'
 import { setConsent, track, useConsent } from '@/lib/pixel'
+import { forgetAttribution } from '@/lib/attribution'
+import { usePublishedInset } from '@/lib/insets'
 
 /**
  * The cookie question, asked once and remembered.
  *
  * The Meta Pixel is already running when this appears (see lib/pixel.ts), so
- * the copy says so. "Accept Essential" is the opt-out, worded as a choice, and
- * it carries equal weight beside "Accept All" rather than being demoted to a
- * link. The footer's "Cookie settings" clears the choice, which brings this
- * back.
+ * the copy says so. "Essential Only" is the opt-out, and it is styled exactly
+ * like "Accept All", side by side, as UK guidance expects. The footer's
+ * "Cookie settings" clears the choice, which brings this back.
+ *
+ * On a phone it is a short bar: one sentence and the two buttons, well under
+ * a quarter of the screen. It publishes its height (lib/insets.ts) so the
+ * sticky Add to Bag bar sits above it rather than under it.
  */
 export function CookieBanner() {
   const consent = useConsent()
   const { pathname } = useLocation()
+  const ref = useRef<HTMLDivElement>(null)
+  const hidden = pathname.startsWith('/admin')
+  const open = consent === null && !hidden
 
-  // The order book is not somewhere to ask, or to track.
-  if (pathname.startsWith('/admin')) return null
+  usePublishedInset('--inset-cookie', ref, open)
+
+  const button =
+    'h-10 border-bone/40 px-4 text-bone hover:border-bone hover:bg-bone hover:text-ink md:h-9'
 
   return (
     <AnimatePresence>
-      {consent === null && (
+      {open && (
         <motion.div
+          ref={ref}
           role="region"
           aria-label="Cookie consent"
           initial={{ y: '100%' }}
@@ -34,23 +45,36 @@ export function CookieBanner() {
           transition={{ duration: 0.6, ease: EASE_OUT_EXPO }}
           className="fixed inset-x-0 bottom-0 z-50 bg-ink text-bone"
         >
-          <Container className="flex flex-col gap-5 py-6 md:flex-row md:items-center md:justify-between md:gap-10">
-            <p className="max-w-2xl text-sm leading-relaxed text-bone/80">
-              We use cookies from Meta to understand which of our Instagram and
-              Facebook adverts bring you here. Choose Accept Essential to turn them
-              off. Essential cookies that keep your bag and checkout working are
-              always on.
+          <Container className="flex flex-col gap-3 py-3.5 md:flex-row md:items-center md:justify-between md:gap-10 md:py-6">
+            <p className="max-w-2xl text-xs leading-relaxed text-bone/80 md:text-sm">
+              <span className="md:hidden">
+                We use Meta cookies to see which of our adverts bring you here.
+              </span>
+              <span className="hidden md:inline">
+                We use cookies from Meta to understand which of our Instagram and
+                Facebook adverts bring you here. Choose Essential Only to turn them
+                off. Essential cookies that keep your bag and checkout working are
+                always on.
+              </span>
             </p>
-            <div className="grid shrink-0 grid-cols-2 gap-3">
+            <div className="grid shrink-0 grid-cols-2 gap-2 md:gap-3">
               <Button
                 variant="outline"
                 size="sm"
-                className="border-bone/30 text-bone hover:border-bone hover:bg-bone hover:text-ink"
-                onClick={() => setConsent('denied')}
+                className={button}
+                onClick={() => {
+                  setConsent('denied')
+                  forgetAttribution()
+                }}
               >
-                Accept Essential
+                Essential Only
               </Button>
-              <Button variant="light" size="sm" onClick={() => setConsent('granted')}>
+              <Button
+                variant="outline"
+                size="sm"
+                className={button}
+                onClick={() => setConsent('granted')}
+              >
                 Accept All
               </Button>
             </div>

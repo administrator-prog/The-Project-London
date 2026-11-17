@@ -83,6 +83,12 @@
     overflow-x: hidden;
   }
 
+  /* Room at the end of the page for the sticky Add to Bag bar, so it never
+     covers the last of the footer. See src/lib/insets.ts. */
+  #root {
+    padding-bottom: var(--inset-cta, 0px);
+  }
+
   ::selection {
     background-color: var(--color-ink);
     color: var(--color-bone);

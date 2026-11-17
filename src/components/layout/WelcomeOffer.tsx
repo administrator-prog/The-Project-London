@@ -6,21 +6,32 @@ import { Button } from '@/components/ui/Button'
 import { HOME_HERO_MOBILE, sized } from '@/data/images'
 import { EASE_OUT_EXPO } from '@/lib/motion'
 import { captureOfferCode, popupWanted, rememberPopup } from '@/lib/offer'
-import { track } from '@/lib/pixel'
+import { identify, track, useConsent } from '@/lib/pixel'
+import { landedFromAd, landingPath } from '@/lib/attribution'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { cn } from '@/lib/utils'
 
 /**
  * The welcome offer: an email address for 10% off, sent by email.
  *
- * Asked once. It waits a while before appearing, or until the cursor heads
- * for the tab bar on a desktop, and it never appears anywhere money is being
- * handled — the bag, checkout, the confirmation page — or in the admin.
+ * Asked once, and kept out of the way of anyone deciding on a dress:
+ *
+ *   - it waits 30 seconds on the site, or until the cursor heads for the tab
+ *     bar on a desktop
+ *   - a visitor who arrived from a Meta advert is not asked on the page the
+ *     advert sent them to, only once they have moved on to a second page
+ *   - it waits for the cookie banner to be answered, so the two never cover
+ *     the page together
+ *   - on a phone it starts as a slim bar along the bottom, and the full form
+ *     opens only if they tap it
+ *   - it never appears anywhere money is being handled (the bag, checkout,
+ *     the confirmation page) or in the admin
  *
  * Whether it appears at all is the server's call (GET /api/offer), so
  * WELCOME_OFFER=off takes it down without a rebuild.
  */
 
-const DELAY_MS = 15_000
+const DELAY_MS = 30_000
 
 /** Must match WELCOME_CONSENT in lib/offer.ts, which stores it with the code. */
 const CONSENT_TEXT =
@@ -30,15 +41,30 @@ const QUIET_PATHS = ['/bag', '/checkout', '/order', '/admin']
 
 const isQuiet = (pathname: string) => QUIET_PATHS.some((path) => pathname.startsWith(path))
 
+type Stage = 'closed' | 'bar' | 'dialog'
+
 export function WelcomeOffer() {
   const { pathname, search } = useLocation()
-  const [open, setOpen] = useState(false)
+  const consent = useConsent()
+  const phone = useMediaQuery('(max-width: 767px)')
+  const [stage, setStage] = useState<Stage>('closed')
   const armed = useRef(false)
+  // When the visitor first became someone it would be fair to ask. The 30
+  // seconds count from here across pages, rather than restarting on each.
+  const eligibleSince = useRef<number | null>(null)
+  const [movedOn, setMovedOn] = useState(false)
 
   // A link from the welcome email carries the code; keep it for checkout.
   useEffect(() => {
     captureOfferCode(search)
   }, [search])
+
+  useEffect(() => {
+    if (landingPath && pathname !== landingPath) setMovedOn(true)
+  }, [pathname])
+
+  const heldForAd = landedFromAd && !movedOn
+  const bannerOpen = consent === null
 
   const show = useCallback(() => {
     if (armed.current) return
@@ -46,7 +72,9 @@ export function WelcomeOffer() {
     fetch('/api/offer')
       .then((response) => (response.ok ? response.json() : null))
       .then((body: { enabled?: boolean } | null) => {
-        if (body?.enabled && popupWanted() && !isQuiet(window.location.pathname)) setOpen(true)
+        if (body?.enabled && popupWanted() && !isQuiet(window.location.pathname)) {
+          setStage(window.matchMedia('(max-width: 767px)').matches ? 'bar' : 'dialog')
+        }
       })
       .catch(() => {
         /* No popup is the right failure. */
@@ -54,9 +82,11 @@ export function WelcomeOffer() {
   }, [])
 
   useEffect(() => {
-    if (armed.current || isQuiet(pathname) || !popupWanted()) return
+    if (armed.current || isQuiet(pathname) || !popupWanted() || heldForAd || bannerOpen) return
 
-    const timer = window.setTimeout(show, DELAY_MS)
+    eligibleSince.current ??= Date.now()
+    const remaining = Math.max(0, DELAY_MS - (Date.now() - eligibleSince.current))
+    const timer = window.setTimeout(show, remaining)
 
     // Exit intent: the pointer leaving through the top of the window.
     const onLeave = (event: MouseEvent) => {
@@ -68,26 +98,69 @@ export function WelcomeOffer() {
       window.clearTimeout(timer)
       document.removeEventListener('mouseout', onLeave)
     }
-  }, [pathname, show])
+  }, [pathname, show, heldForAd, bannerOpen])
 
   // Navigating somewhere quiet takes it away, without counting as a no.
   useEffect(() => {
-    if (isQuiet(pathname)) setOpen(false)
+    if (isQuiet(pathname)) setStage('closed')
   }, [pathname])
+
+  // Turning a phone to landscape, or widening a window, past the breakpoint.
+  useEffect(() => {
+    if (!phone && stage === 'bar') setStage('dialog')
+  }, [phone, stage])
 
   const dismiss = useCallback(() => {
     rememberPopup('dismissed')
-    setOpen(false)
+    setStage('closed')
   }, [])
 
   return (
     <AnimatePresence>
-      {open && <OfferDialog onDismiss={dismiss} onDone={() => setOpen(false)} />}
+      {stage === 'bar' && (
+        <OfferBar key="bar" onOpen={() => setStage('dialog')} onDismiss={dismiss} />
+      )}
+      {stage === 'dialog' && (
+        <OfferDialog key="dialog" onDismiss={dismiss} onDone={() => setStage('closed')} />
+      )}
     </AnimatePresence>
   )
 }
 
 /* ------------------------------------------------------------------------ */
+
+/**
+ * The phone version, before it is asked for: one line along the bottom,
+ * above the sticky Add to Bag bar when a product page shows one.
+ */
+function OfferBar({ onOpen, onDismiss }: { onOpen: () => void; onDismiss: () => void }) {
+  return (
+    <motion.div
+      role="region"
+      aria-label="Welcome offer"
+      initial={{ y: '100%' }}
+      animate={{ y: 0 }}
+      exit={{ y: '100%' }}
+      transition={{ duration: 0.5, ease: EASE_OUT_EXPO }}
+      style={{ bottom: 'var(--inset-cta, 0px)' }}
+      className="fixed inset-x-0 z-40 flex items-center gap-2 bg-ink pl-4 text-bone"
+    >
+      <button type="button" onClick={onOpen} className="flex min-h-12 flex-1 items-center gap-3 text-left">
+        <span className="text-sm">10% off your first order</span>
+        <span className="label-sm text-bone/70 underline underline-offset-4">Get code</span>
+      </button>
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="No thank you"
+        className="grid h-12 w-12 shrink-0 place-items-center text-bone/70 hover:text-bone"
+      >
+        <X size={16} strokeWidth={1.25} />
+      </button>
+    </motion.div>
+  )
+}
+
 
 function OfferDialog({ onDismiss, onDone }: { onDismiss: () => void; onDone: () => void }) {
   const [email, setEmail] = useState('')
@@ -136,7 +209,7 @@ function OfferDialog({ onDismiss, onDone }: { onDismiss: () => void; onDone: () 
 
       if (response.ok && body?.ok) {
         rememberPopup('joined')
-        track('Lead')
+        void identify(trimmed).then(() => track('Lead'))
         setSent(true)
       } else if (body?.error === 'used') {
         // Nothing more to offer this address; do not ask again.

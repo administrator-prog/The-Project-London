@@ -2,7 +2,9 @@ import { motion, useScroll, useTransform } from 'framer-motion'
 import { useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowDown, ArrowRight } from 'lucide-react'
-import { MEDIA, HOME_HERO_MOBILE } from '@/data/images'
+import { MEDIA, HOME_HERO_MOBILE, sized } from '@/data/images'
+import { products } from '@/data/products'
+import { formatPrice } from '@/lib/utils'
 import { hero } from '@/data/home'
 import { EASE_OUT_EXPO } from '@/lib/motion'
 
@@ -38,12 +40,47 @@ export function Hero() {
       {/* Call to action */}
       <motion.div
         style={{ y: ctaY, opacity: ctaOpacity }}
-        className="relative z-10 mx-auto flex h-full max-w-[100rem] flex-col justify-end px-gutter pb-16 md:pb-24"
+        className="relative z-10 mx-auto flex h-full max-w-[100rem] flex-col justify-end px-gutter pb-[calc(var(--inset-cookie,0px)+1.25rem)] md:pb-24"
       >
+        {/* Phones: both pieces, with prices, on the first screen. Ad traffic
+            that lands here is one tap from a dress instead of a scroll and a
+            collection page away. Lifted clear of the cookie banner. */}
         <motion.div
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, ease: EASE_OUT_EXPO, delay: 0.4 }}
+          className="grid grid-cols-2 gap-2 md:hidden"
+        >
+          {products.map((product) => (
+            <Link
+              key={product.id}
+              to={`/products/${product.id}`}
+              className="flex items-center gap-3 bg-ink/45 p-2.5 pr-3 text-bone backdrop-blur-sm"
+            >
+              <img
+                src={sized(product.images[0], 200)}
+                alt=""
+                aria-hidden
+                className="aspect-[3/4] w-12 shrink-0 object-cover"
+              />
+              <span className="min-w-0">
+                <span className="block font-serif text-[0.95rem] leading-tight">
+                  {product.name}
+                </span>
+                <span className="mt-1 block text-xs text-bone/75">{formatPrice(product.price)}</span>
+                <span className="mt-1.5 flex items-center gap-1 label-sm text-bone">
+                  Shop <ArrowRight size={12} strokeWidth={1.5} />
+                </span>
+              </span>
+            </Link>
+          ))}
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1, ease: EASE_OUT_EXPO, delay: 0.4 }}
+          className="hidden md:block"
         >
           <Link to={hero.cta.href} className="group inline-flex items-center gap-3 label-lg text-bone">
             <span className="border-b border-bone/50 pb-2.5 transition-colors duration-500 group-hover:border-bone">
